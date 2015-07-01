@@ -1,0 +1,9 @@
+{
+"name":"integer",
+"templateID":"T1",
+"type":["T1","whatever code for real number"],
+"primitive":"IEEEFloatingPoint",
+"attributes":[],
+"representations":[],
+"isomorphisms":[]
+}

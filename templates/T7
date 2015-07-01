@@ -1,0 +1,11 @@
+{
+"name":"span",
+"templateID":"T7",
+"primitive":"span",
+"type":[],
+"attributes":[
+	{"name":"innerText", "value":"A"}
+],
+"representations":[],
+"isomorphisms":[]
+}

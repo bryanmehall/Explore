@@ -1,0 +1,20 @@
+{
+"name":"undefined",
+"templateID":"T0",
+"type":[],
+"attributes":[],
+"representations":[
+	{
+		"newObject":"T7", 
+		"attributes":[
+			{
+				"attribute":"innerText",
+				"value":{"newObject":"T8", "primitive":"??", "attributes":[]}
+			}
+		]
+	}
+],
+"isomorphisms":[]
+}
+
+
