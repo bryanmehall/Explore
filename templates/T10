@@ -1,0 +1,34 @@
+{
+"name":"addition",
+"includedObjects":["T0","T7","T8"],
+"templateID":"T10",
+"type":["T10"],
+"attributes":[
+	{
+		"name":"textRepresentation",
+		"value":{
+			"templateID":"T7",
+			"arguments":{
+					"innerText":{"templateID":"T8", "primitive":"+", "arguments":{}}
+			}
+		}
+	},
+	{
+		"name":"operand1",
+		"value":{
+			"templateID":"T0",
+			"arguments":{}
+			
+		}
+	},
+	{
+		"name":"operand2",
+		"value":{
+			"templateID":"T0",
+			"arguments":{}
+			
+		}
+	}
+	
+]
+}

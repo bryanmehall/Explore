@@ -1,20 +1,17 @@
 {
-"name":"undefined",
+"name":"three",
 "includedObjects":["T7","T8"],
-"templateID":"T0",
-"type":["T0"],
+"templateID":"T9",
+"type":["T9"],
 "attributes":[
 	{
 		"name":"textRepresentation",
 		"value":{
 			"templateID":"T7",
 			"arguments":{
-					"innerText":{"templateID":"T8", "primitive":"??", "arguments":{}}
-					
+					"innerText":{"templateID":"T8", "primitive":"3", "arguments":{}}
 			}
 		}
 	}
 ]
 }
-
-

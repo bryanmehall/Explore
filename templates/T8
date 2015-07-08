@@ -1,9 +1,8 @@
 {
 "name":"string",
+"includedObjects":[],
 "templateID":"T8",
 "primitive":"string",
-"type":[],
-"attributes":[],
-"representations":[],
-"isomorphisms":[]
+"type":["T8"],
+"attributes":[]
 }

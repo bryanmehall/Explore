@@ -1,10 +1,13 @@
 {
 "name":"span",
+"includedObjects":["T11"],
 "templateID":"T7",
 "primitive":"span",
-"type":[],
+"type":["T7"],
 "attributes":[
-	{"name":"innerText", "value":"A"}
+	{"name":"innerText","value":{"templateID":"T11","arguments":{}}},
+	{"name":"parentElement","value":{"templateID":"T11","arguments":{}}}
+	
 ],
 "representations":[],
 "isomorphisms":[]

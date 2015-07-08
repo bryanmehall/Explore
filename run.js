@@ -2,7 +2,7 @@ window.onload = function(){
 	var app = window.app
 	var box = document.getElementById('box')
 	
-	var basetemplates = ['T0','T1']
+	var basetemplates = ['T0','T1','T9','T10']
 	basetemplates.forEach(function(item){
 		app.loadTemplate(item,function(){})
 	})
@@ -32,7 +32,9 @@ window.onload = function(){
 			var matches = searchTag(this.value, app.templateCache)
 			if (matches.length === 1) {
 				document.body.removeChild(box)
-				app.createObject(matches[0].templateID,[],function(){})
+				console.time('someFunction');
+				app.createObject(matches[0].templateID,{},function(){})
+				console.timeEnd('someFunction');
 			}
 			var newOptions = document.createElement('div');
 			matches.forEach(function(item) {
@@ -57,13 +59,7 @@ window.onload = function(){
 	box.addEventListener('click',function(){
 		box.focus()
 	})
-	box.addEventListener('keyup',function(event){
-		app.createObject('T1',function(integer){
-		integer.properties.value.set(String.fromCharCode(event.keyCode))
-	});
-	
-	
-	})
+
 	
 
 	
