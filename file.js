@@ -1,16 +1,17 @@
-
 window.app = {
 	objCounter:0,
 	objectProto:{//contains shared methods of all objects
-		subscribe:function(attributeName){
+		subscribe:function(attributeName, callback){
+			
 			var targetObject = this.attributes[attributeName];
 			if (targetObject != undefined){
 				targetObject.primitive.dependantPrimitives.push(this.primitive)
+				callback(primitive);
 			}
 			else{
 				var x = this.attributePrimitiveBuffer[attributeName];
 				this.attributePrimitiveBuffer[attributeName] = (x === undefined) ? [] : x;
-				this.attributePrimitiveBuffer[attributeName].push(this.primitive);
+				this.attributePrimitiveBuffer[attributeName].push({primitive:this.primitive, callback:callback});
 			}
 		}
 	},
@@ -24,7 +25,26 @@ window.app = {
 		unlink:function(){}
 	},
 	primitives:{
-	
+		file:{
+			init:function(parentObject){
+			}
+		},
+		window:{
+			dependantPrimitives:[],
+			init:function(parentObject){
+				this.parentObject = parentObject;
+				this.element = document.createElement('div');
+				this.element.style.width = '200px'
+				this.element.style.height = '200px'
+				this.element.style.backgroundColor = '#eeeeee'
+				
+				document.body.appendChild(this.element);
+			}
+		},
+		
+		
+		
+		
 		addition:{
 			//parentObject
 			dependantPrimitives:[],
@@ -37,15 +57,22 @@ window.app = {
 		span:{
 			dependantPrimitives:[],
 			init:function(parentObject){
+				var primitive = this
 				this.parentObject = parentObject
 				this.element = document.createElement('span')
-				parentObject.subscribe('innerText')
-				document.body.appendChild(this.element)
+				parentObject.subscribe('innerText',function(attributeObject){
+					primitive.element.innerText = attributeObject.primitive.element///attribute not created when this is called
+				})
+				
+				parentObject.subscribe('parentElement',function(attributeObject){
+					console.log('span', attributeObject)
+					attributeObject.primitive.element.appendChild(primitive.element)
+				})
 				this.element.addEventListener('click',function(){})
 			},
 			update:function(){
-				console.log(this.parentObject)
-				this.element.innerText = this.parentObject.attributes.innerText.value.primitive.element
+				
+				//this.element.innerText = this.parentObject.attributes.innerText.value.primitive.element
 			}
 		},
 		
@@ -60,7 +87,7 @@ window.app = {
 			
 			set:function(value){
 				
-				console.log('string primitive set to ',value,'dependant',this.dependantPrimitives)
+				//console.log('string primitive set to ',value,'dependant',this.dependantPrimitives)
 				this.element = value;
 				this.update();
 			},
@@ -91,9 +118,11 @@ window.app = {
 	loadTemplate: function(templateID, callback) {
 		var app = this;
 		if (app.templateCache[templateID] === undefined) {
+		
 			$.getJSON('templates/' + templateID, function(template) {
 				app.templateCache[templateID] = template;
 				var remainingAJAXRequests = template.includedObjects.length
+				if (remainingAJAXRequests === 0){callback(template)}
 				template.includedObjects.forEach(function(ID) {
 					app.loadTemplate(ID, function(innerTemplate) {
 						remainingAJAXRequests -=1;
@@ -102,6 +131,7 @@ window.app = {
 						}
 					})
 				})
+				
 			})
 			.fail(function(a, b, c) {
 			
@@ -124,7 +154,8 @@ window.app = {
 		
 	},
 	
-	createSynchronous : function(templateID,args){
+	createSynchronous : function(templateID,args) {
+		//console.log('creating',templateID)
 		var app = this
 		var template = app.templateCache[templateID]
 		var newObject = Object.create(app.objectProto);
@@ -133,7 +164,6 @@ window.app = {
 		newObject.type = template.type;
 		newObject.attributes = {};
 		newObject.attributePrimitiveBuffer = {};
-		
 		//initialize object primitive
 		if (template.primitive != undefined){
 			var primitive = Object.create(app.primitives[template.primitive])
@@ -143,34 +173,82 @@ window.app = {
 
 		//add all templates
 		template.attributes.forEach(function(attribute){
+			//console.log('a',attribute.value)
 			
-			newObject.attributes[attribute.name] = Object.create(app.attributeProto)
-			var newAttr = newObject.attributes[attribute.name]
+			var newAttr = newObject.attributes[attribute.name] = Object.create(app.attributeProto)
+			
 			newAttr.name = attribute.name
 			
-			if (newObject.attributePrimitiveBuffer.hasOwnProperty(attribute.name)){
-				var bufferedPrimitive = newObject.attributePrimitiveBuffer[attribute.name];
+			if (newObject.attributePrimitiveBuffer.hasOwnProperty(attribute.name)) {
+				//attributePrimitiveBuffer is in the form:
+				//{attribute_name:[{primitive:primitive_object,callback:callback_function}, ...]}
+				var bufferedPrimitive = [];
+				var bufferedCallback = [];
+				newObject.attributePrimitiveBuffer[attribute.name].forEach(function(item){
+					bufferedPrimitive.push(item.primitive)
+					bufferedCallback.push(item.callback)
+				});
+				
+				
 			}
-			else{bufferedPrimitive = []}
+			else {
+				var bufferedPrimitive = [];
+				var bufferedCallback = [];
+			}
 			
 			if (args.hasOwnProperty(attribute.name)){
-
-				var objectProperties = args[attribute.name]
-				newAttr.value = app.createSynchronous(objectProperties.templateID,objectProperties.arguments)
+			//consolidate this and code in second else into a function
+				var argument = args[attribute.name]//consollidate by changing all instances of argument
 				
-				if (newAttr.value.primitive != undefined){
-					newAttr.value.primitive.dependantPrimitives = bufferedPrimitive;
+				
+				if (argument.hasOwnProperty('reference')) {
+					if (argument.reference === 'global') {
+						var referencedObject = app.fileObject
+						argument.path.forEach(function(pathElement){
+							referencedObject = referencedObject.attributes[pathElement]
+						})
+						newObject.attributes[attribute.name] = referencedObject
+						console.log(referencedObject.value.primitive)
+						bufferedCallback[0](referencedObject.value)//not fully working...just temporary
+					}
+					else if(argument.reference ==='local'){
+						console.log('local',argument)
+					}
+					
 				}
-				if (objectProperties.primitive != undefined){
-					newAttr.value.primitive.set(objectProperties.primitive)//this code is ugly but the attributre needs to be defined when the set method is called on the primitive
+				else{
+					newObject.attributes[attribute.name].value = app.createSynchronous(argument.templateID,argument.arguments)
+				
+				
+					if (argument.primitive != undefined){
+						newAttr.value.primitive.set(argument.primitive)//this code is ugly but the attributre needs to be defined when the set method is called on the primitive
+					}
+				
+					if (newAttr.value.primitive != undefined){
+						newAttr.value.primitive.dependantPrimitives = bufferedPrimitive;
+						bufferedCallback.forEach(function(primitiveCallback){
+						
+							primitiveCallback(newAttr.value)
+						})
+					}
 				}
-			}
+			}//c
 			else{
-				newAttr.value = app.createSynchronous(attribute.value.templateID,attribute.value.arguments)
-				if (newAttr.value.primitive != undefined){
-					newAttr.value.primitive.dependantPrimitives = bufferedPrimitive;
+				if (newObject.attributes[attribute.name].hasOwnProperty('reference')){
+					
+				}
+				else{
+					newObject.attributes[attribute.name].value = app.createSynchronous(attribute.value.templateID,attribute.value.arguments)
+					if (newAttr.value.primitive != undefined){
+						newAttr.value.primitive.dependantPrimitives = bufferedPrimitive;
+						bufferedCallback.forEach(function(primitiveCallback){
+							//console.log('b')
+							primitiveCallback(newAttr.value)
+						})
+					}
 				}
 			}
+			
 			
 			
 		})

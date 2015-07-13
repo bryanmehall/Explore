@@ -9,7 +9,8 @@
 		"value":{
 			"templateID":"T7",
 			"arguments":{
-					"innerText":{"templateID":"T8", "primitive":"??", "arguments":{}}
+					"innerText":{"templateID":"T8", "primitive":"??", "arguments":{}},
+					"parentElement":{"reference":"global", "path":["textWindow"]}
 					
 			}
 		}

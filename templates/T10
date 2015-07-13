@@ -9,7 +9,9 @@
 		"value":{
 			"templateID":"T7",
 			"arguments":{
-					"innerText":{"templateID":"T8", "primitive":"+", "arguments":{}}
+					"innerText":{"templateID":"T8", "primitive":"+", "arguments":{}},
+					"parentElement":{"reference":"global", "path":["textWindow"]}
+					
 			}
 		}
 	},
@@ -17,9 +19,17 @@
 		"name":"operand1",
 		"value":{
 			"templateID":"T0",
-			"arguments":{}
-			
+			"arguments":{
+				"textRepresentation":{
+					"templateID":"T7", 
+					"arguments":{
+						"parentElement":{
+							"reference":"local", "path":[]}
+					}
+				}
+			}
 		}
+			
 	},
 	{
 		"name":"operand2",

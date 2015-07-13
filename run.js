@@ -1,11 +1,30 @@
+
+
+
+
 window.onload = function(){
 	var app = window.app
 	var box = document.getElementById('box')
+
+	var appLoaded = function(){
+		var app = window.app
+		var box = document.getElementById('box')
+		app.createObject('T13',{},function(file){
+			app.fileObject = file;
+		})
+		document.addEventListener('keypress',function(event){
+			var key = String.fromCharCode(event.keyCode);
+			if (key ==="\\"){
+				newObjectMenu()
+			}
+		})
 	
-	var basetemplates = ['T0','T1','T9','T10']
-	basetemplates.forEach(function(item){
-		app.loadTemplate(item,function(){})
-	})
+	
+		box.addEventListener('click',function(){
+			box.focus()
+		})
+
+	}
 	
 	var searchTag = function(tag, lib) {
 		var matches = [];
@@ -48,19 +67,21 @@ window.onload = function(){
 		textArea.focus()
 	}
 	
-	document.addEventListener('keypress',function(event){
-		var key = String.fromCharCode(event.keyCode);
-		if (key ==="\\"){
-			newObjectMenu()
-		}
+	var baseTemplates = ['T0','T1','T9','T10','T12','T13']  //make it so objects can load dymanically on search
+	var loadCount = 1;
+	var target = baseTemplates.length
+	baseTemplates.forEach(function(item){
+		app.loadTemplate(item,function(){
+			if (loadCount === target){
+				appLoaded()
+			}
+			else{
+				loadCount+=1
+			}
+		})
 	})
 	
-	
-	box.addEventListener('click',function(){
-		box.focus()
-	})
-
-	
-
 	
 }
+
+
