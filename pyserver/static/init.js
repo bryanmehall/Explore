@@ -2,7 +2,7 @@ window.onload = function(){
 	var app = window.app
 	var path = window.location.pathname
 	var json;
-	
+	app.init()
 	var saveToFile = function(){
 		var json = app.serializeObject(app.fileObject)//change to selected object
 		$.ajax({
@@ -65,6 +65,8 @@ window.onload = function(){
 	var newTemplateButton = document.getElementById('newTemplate')
 	newTemplateButton.addEventListener('click', addTemplateHandler)
 	
+
+	
 	var addObjectEventHandler = function(event){
 		var key = String.fromCharCode(event.keyCode);
 			if (key ==="\\" && !app.selectingObject){
@@ -80,6 +82,7 @@ window.onload = function(){
 	var importTemplateToFile = function(){	
 		var initializationObjects = [
 			'ayh5mcvd0a7hz3t6b7z8vhtp',//file object
+			'dyh5mcvd0a7hz3t6b7z8vhtp',
 			'bbl3gf7bk9jvb3zqqr43zvpm',//instanceOf object
 			path.split('/').slice(-1)[0]
 		];
@@ -88,6 +91,7 @@ window.onload = function(){
 				document.getElementById('accordianContainer').appendChild(object.accordianContainer)
 				if (templateID === 'ayh5mcvd0a7hz3t6b7z8vhtp'){
 					app.fileObject = object
+					//initialize app.fileObjects
 				}
 			})
 		})

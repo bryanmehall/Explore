@@ -3,16 +3,45 @@ window.app = {
 	objectCounter: 0,
 	mapCreation: true,
 	visualizeGraph: false,
-	typeTable: {},
-	nameTable: {},
-	fileObjects: [],
 	
+	init: function(){
+		var objectTable = {
+			getKey: function(value){
+				var table = this
+				Object.keys(table).forEach(function(key){
+					if (table[key] === value){
+						return key
+					}
+				})
+				return undefined
+			}
+		}
+		//table containing template objects (any object with an instance of it)
+		app.templateCache = Object.create(objectTable) //{uuid:object}
+		//table containing all objects currently in the file
+		app.objectCache = Object.create(objectTable) //{uuid:object}
+		//table with all named objects (current language) in the file
+		app.nameTable = Object.create(objectTable)  //{jsStringForName:object}
+		//table with all file reference 
+		app.fileObjects = Object.create(objectTable) //{fileIdentifier:object}
+		app.userObjects = Object.create(objectTable) //{useridentifier: object}
+	},
+	
+	generateUUID : function(){
+		var d = new Date().getTime();
+		var uuid = 'untrustedxxxxxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+			var r = (d + Math.random()*16)%16 | 0;
+			d = Math.floor(d/16);
+			return (c=='x' ? r : (r&0x3|0x8)).toString(16);
+		});
+		return uuid;
+	},
 	objectProto: {//contains shared methods of all objects
 		subscribe: function (attributeTypeUUID, callback){
 			var targetObject = this.attributes[attributeTypeUUID];
 			
 			if (targetObject != undefined){
-				targetObject.primitive.dependantPrimitives.push(this.primitive)
+				targetObject.primitive.dependentPrimitives.push(this.primitive)
 				callback(primitive);
 			}
 			else{
@@ -23,13 +52,13 @@ window.app = {
 		},
 		initPrimitive: function(primitiveName, primitiveValue){
 			var primitive = Object.create(app.primitives[primitiveName])
-			primitive.dependantPrimitives = [];
+			primitive.dependentPrimitives = [];
 			this.primitive = primitive;
 			primitive.init(this)
 			primitive.parseString(primitiveValue)
 			console.log('adding primitive')
 		},
-		addAttribute: function (attributeObject, inheritedUUID){ 
+		addAttribute: function(attributeObject, inheritedUUID) { 
 			var app = window.app
 			var parentObject = this;
 			
@@ -38,24 +67,19 @@ window.app = {
 			this.addAttributeToObjectVisualization(inheritedUUID, [])
 			
 		},	
-		newAddAttribute:function (attributeType, values){
+		newAddAttribute: function(attributeType, values) {
 			var app = window.app
 			var parentObject = this;
 			values = values || []
-			//values.forEach(function(value,valueIndex){
-				//if (app.visualizeGraph){app.graph.addLink(parentObject.id.toString(),value.id.toString())}
-				//value.dependantObjects.push({attributeType:attributeType, valueIndex:valueIndex, dependantObject:parentObject})
-			//})
-			//var propertyObject = app.synchronousCreateObject(attributeType)
-			
-			//do all type checking here
-			this.attributes[attributeType] = {property:attributeType, values:values}
+			console.log(attributeType)
+			var attributeObject = app.synchronousCreateInstance(attributeType)
+			this.attributes[attributeType] = {attribute:attributeObject, values:values}
 			
 			
 			if (this.attributePrimitiveBuffer.hasOwnProperty(attributeType)&&this.hasOwnProperty('primitive')) {//attribute primitive buffer enumerates all of the objects that its own primitive depends on so 
 				this.attributePrimitiveBuffer[attributeType].forEach(function(primitiveLink){
 					values.forEach(function(value){
-						value.primitive.dependantPrimitives.push(primitiveLink.primitive)
+						value.primitive.dependentPrimitives.push(primitiveLink.primitive)
 					})
 					primitiveLink.callback(values)
 				})
@@ -68,9 +92,9 @@ window.app = {
 			//Object.keys(object.attributes).forEach()
 		},
 		replaceObject: function (newObject){
-			var dependantObjects = this.dependantObjects
-			dependantObjects.forEach(function(reference){
-				reference.dependantObject.setAttribute(reference.attributeType, newObject, reference.valueIndex)
+			var dependentObjects = this.dependentObjects
+			dependentObjects.forEach(function(reference){
+				reference.dependentObject.setAttribute(reference.attributeType, newObject, reference.valueIndex)
 				console.log('setting attribute', reference.attributeType, newObject)
 			})
 		},		
@@ -83,7 +107,7 @@ window.app = {
 		},
 		referenceAttribute: function (parentObject, attributeType, valueIndex){//get rid of this. just have the value be what is intended and then deal with it in the replace attribute
 			var value = parentObject.attributes[attributeType].values[valueIndex]
-			value.dependantObjects.push(this)
+			value.dependentObjects.push(this)
 			return value
 		},
 		removeAttributeValue: function (attributeType,value){//remove instance of 'value' from values of 'attributetype'
@@ -112,6 +136,7 @@ window.app = {
 				e.stopPropagation()
 				app.select(obj)
 				document.getElementById('jsonText').innerText = app.serializeObject(obj)
+				app.saveObject(obj, function(){})
 			})
 			
 			if (this.hasOwnProperty('primitive')){
@@ -147,6 +172,7 @@ window.app = {
 			this.accordianContainer.appendChild(attributeDiv)
 			return this.accordianContainer
 		},
+		
 		addAttributeToObjectVisualization: function(attributeType, values){
 			var obj = this
 			var attributeListDiv = this.accordianContainer.querySelector('.attributeList')
@@ -171,6 +197,7 @@ window.app = {
 			
 			attributeBlock.appendChild(addValueButton)
 		},
+		
 		addValueToAttribute: function (attributeType){
         	var obj = this;
 			var valueListDiv = this.accordianContainer.querySelector('.'+attributeType)
@@ -178,9 +205,8 @@ window.app = {
 			
         }
 	},
-	
-    
-	searchTemplates:function(searchTerm,cb){
+	   
+	searchTemplates:function(searchTerm,cb) {
 		$.ajax({
 			type: 'POST',
 			url: '/core/query_objects',
@@ -195,14 +221,14 @@ window.app = {
 		});
 	},
 	
-	searchObjects:function(searchTerm,numberOfResults){
+	searchObjects:function(searchTerm,numberOfResults) {
 		console.log('add searching functionality')
 		Object.keys(app.nameTable).forEach(function(){
 		})
 		return []
 	},
 	
-	newObjectSelector:function(typeRestrictions, eventLocation, cb){
+	newObjectSelector:function(typeRestrictions, eventLocation, cb) {
 		var typeRestrictions = typeRestrictions || [];
 		var box = document.createElement('div');
 		app.selectingObject = true;
@@ -273,7 +299,7 @@ window.app = {
 		textArea.focus()
 	},
 	
-	select: function(selectedObject){//should this be a method of the object?
+	select: function(selectedObject) {//should this be a method of the object?
 		if(!window.event.shiftKey) {
 			app.fileObject.attributes.eyh5mcvd0a7hz3t6b7z8vhtp.values.forEach(function(object){
 				app.deSelect(object)
@@ -285,14 +311,14 @@ window.app = {
 		
 	},
 	
-	deSelect: function(selectedObject){
+	deSelect: function(selectedObject) {
 		selectedObject.accordianContainer.style.backgroundColor = 'white'
 		//selectedObject.attributes.Pselected.values[0].primitive.set(false)
 		this.fileObject.removeAttributeValue('eyh5mcvd0a7hz3t6b7z8vhtp',selectedObject)
 		
 	},
 	
-	fileReference: function(path){
+	fileReference: function(path) {
 		var referencedObject = app.fileObject
 			path.forEach(function(pathElement){
 				referencedObject = referencedObject.attributes[pathElement].value
@@ -301,24 +327,22 @@ window.app = {
 		return referencedObject
 	},
 	
-	mergeAttributes: function(object1, object2){
+	mergeAttributes: function(object1, object2) {
 		Object.keys(object1.attributes).forEach(function(attributeType){
 			var matchIndex = Object.keys(object2.attributes).indexOf(attributeType)
 		})
 	},
 	
-	templateCache: {},
-	
-	loadTemplate: function(templateID, callback) {
+	loadTemplate: function(templateUUID, callback) {//change function name to loadJSON
 		var app = this;
-		if (app.templateCache[templateID] === undefined) {
+		if (app.templateCache[templateUUID] === undefined) {
 		
-			$.getJSON('/templates/'+templateID, function(template) {
-				app.templateCache[templateID] = template;
+			$.getJSON('/templates/'+templateUUID, function(template) {
+				app.templateCache[templateUUID] = template;
 				var remainingAJAXRequests = template.includedObjects.length
 				if (remainingAJAXRequests === 0){callback(template)}
-				template.includedObjects.forEach(function(ID) {
-					app.loadTemplate(ID, function(innerTemplate) {
+				template.includedObjects.forEach(function(UUID) {
+					app.loadTemplate(UUID, function(innerTemplate) {
 						remainingAJAXRequests -=1;
 						if (remainingAJAXRequests === 0) {
 							callback(template);
@@ -337,7 +361,7 @@ window.app = {
 		}
 	},
 	
-	newTemplate : function(user, json, nameEn,cb){//move to app file
+	newTemplate: function(user, json, nameEn,cb){//move to app file
 		var newTemplatePath = '/'+user+'/newTemplate'
 		var test = $.ajax({
 					type: 'POST',
@@ -354,7 +378,7 @@ window.app = {
 				});
 	},
 	
-	asyncCreateObject : function(templateUUID,cb) {
+	asyncCreateObject: function(templateUUID,cb) {
 		var app = this;
 		app.loadTemplate(templateUUID,function(template){
 			var newObject = app.synchronousCreateObject(template)
@@ -362,7 +386,7 @@ window.app = {
 		})
 	},
 	
-	asyncCreateInstance : function(parentUUID,cb) {
+	asyncCreateInstance: function(parentUUID,cb) {
 		var app = this;
 		var newObject;
 		var create = function(){
@@ -375,9 +399,9 @@ window.app = {
 		};
 		
 		
-		if (!app.typeTable.hasOwnProperty(parentUUID)){
+		if (!app.templateCache.hasOwnProperty(parentUUID)){
 			app.asyncCreateObject(parentUUID, function(parentObject){
-				app.typeTable[parentUUID] = parentObject
+				app.templateCache[parentUUID] = parentObject
 				create();
 				
 			})
@@ -387,18 +411,19 @@ window.app = {
 
 	},
 	
-	synchronousCreateInstance:function(templateUUID){
+	synchronousCreateInstance: function(templateUUID){
 		var app = this
 		var newObject = Object.create(app.objectProto)
 		newObject.attributes = {};
-
-		if (!app.typeTable.hasOwnProperty(templateUUID)){ 
+		
+		if (!app.templateCache.hasOwnProperty(templateUUID)){ 
 			console.log('need to call asyncCreateInstance')
 		}
 		//if version numbers do not match ask the user if they want to run a merge operation
-		var templateObject = app.typeTable[templateUUID]
+		var templateObject = app.templateCache[templateUUID]
 		
 		if (templateObject.hasOwnProperty('primitive')){
+			console.log(templateObject)
 			var primitiveString = templateObject.primitive.save()
 			newObject.initPrimitive(primitiveString.name, primitiveString.value)
 		}
@@ -413,37 +438,23 @@ window.app = {
 				newObject.extendAttribute(attributeKey,attributeValue)
 			})
 		})
-		
+		newObject.uuid = app.generateUUID()
 		return newObject
 	},
 	
-	synchronousCreateObject:function(template){//loads the objects in the template if it can be guaranteed that all objects in dependant objects are loaded
+	synchronousCreateObject: function(template){//loads the objects in the template if it can be guaranteed that all objects in dependent objects are loaded
 		var app = this
 		var newObject = Object.create(app.objectProto)
 		newObject.attributes = {}
 		newObject.attributePrimitiveBuffer = {};
-		var referenceTable = {}
+		var referenceTable = {};
 		var parentTypeObject = undefined;
 		//check type of object. if its type exists in typeTable then reference it else create it
 		if (template.hasOwnProperty('uuid')){
-			newObject.uuid = template.uuid
+			newObject.uuid = template.uuid;
+		} else {
+			newObject.uuid = app.generateUUID();
 		}
-		template.attributes.forEach(function(attributeTemplate){
-			if (attributeTemplate.type === 'P0'){
-				
-				var typeString = attributeTemplate.values[0].primitive.value
-				if (app.typeTable.hasOwnProperty(typeString)){
-					console.log('using existing template')
-					parentTypeObject = app.typeTable[typeString]
-				} else {
-					console.log('creating new template', typeString)
-					
-					parentTypeObject = app.synchronousCreateObject(expType)//the problem is that exp type is not the template for a span
-					console.log('pto',parentTypeObject)
-					app.typeTable[typeString] = parentTypeObject
-				}
-			} 
-		})
 		
 		if (template.hasOwnProperty('primitive')){
 			newObject.initPrimitive(template.primitive.name, template.primitive.value)
@@ -483,7 +494,7 @@ window.app = {
 			})
 		} else {
 			template.attributes.forEach(function(attributeTemplate){
-				//eventuallty use add attribute function here right now it just adds the values template to the attributes list
+			//eventuallty use add attribute function here right now it just adds the values template to the attributes list
 				
 				newObject.newAddAttribute(attributeTemplate.type, parseValuesList(attributeTemplate.values)) 
 			})
@@ -491,8 +502,8 @@ window.app = {
 		
 		return newObject
 	},
-	
-	serializeObject:function(object){
+
+	serializeObject: function(object){
 		var referenceTable = []
 		var requiredTemplates = []
 		var serializeLevel = function(object){//serialize single level of an object so that reference table is abstracted
@@ -535,7 +546,122 @@ window.app = {
 		return JSON.stringify(serializedObject,undefined,2)
 	},
 	
-	primitives:{
+	loadObject:function(uuid,cb){
+		
+	},
+	
+	createObject:function(uuid){//load object only is called when loading 
+		//a template or loading objects from a file, not instantiating new objects
+		var app = this
+		
+		if (app.objectCache.hasOwnProperty(uuid)){
+			var template = app.objectCache[uuid];
+		} else {
+			console.log('need to load json for ' + uuid + ' before calling createObject')
+			return 'eventually return undefined'
+		}
+		var newObject = Object.create(app.objectProto)
+		newObject.uuid = template.uuid
+		
+		if (template.hasOwnProperty('primitive')){
+			newObject.initPrimitive(template.primitive.name, template.primitive.value)
+		}
+		
+		newObject.addObjectToVisualization()
+		
+		template.attributes.forEach(function(attrTemplate){
+			
+		});
+	},
+	
+	
+	saveObject: function(object, cb){
+		var objectsToSave = [];
+		var dependentObjects = [];
+		var addDepencency = function(includedObject){
+			//add uuid to dependent Objects if it is not already there
+			if (dependentObjects.indexOf(includedObject.uuid)===-1){
+				dependentObjects.push(includedObject.uuid)
+			}
+		}
+		
+		var serializeElement = function(element){
+			var obj = {};
+			obj.uuid = element.uuid
+			var dependentObjects = []; //only direct descendants
+			var attributes = [];
+			//save primitive
+			if (object.hasOwnProperty('primitive')){
+				obj.primitive = object.primitive.save()
+			}
+
+			//save attributes
+			Object.keys(object.attributes).forEach(function(key){
+				var attribute = object.attributes[key];
+				
+				var typeUUID = attribute.attribute.uuid
+				addDepencency(attribute.attribute)
+				var values = [];
+				attribute.values.forEach(function(value){
+					if (app.userObjects.getKey(value) !== undefined){
+						values.push({refType:'user', ref:app.userObjects.getKey(value)})
+					} else if (app.fileObjects.getKey(value) !== undefined){
+						values.push({refType:'file', ref:app.userObjects.getKey(value)})
+					} else {
+						values.push(value.uuid)
+						addDepencency(value)
+					}
+				})
+				
+				attributes.push({type:typeUUID, values:values})
+			})
+			
+			obj.dependentObjects = dependentObjects;
+			obj.attributes = attributes
+			return JSON.stringify(obj)
+		}
+		
+		var listIncludedObjects = function(subObject){
+			if (objectsToSave.indexOf(subObject)=== -1){
+				//maybe switch so objectsToSave is internal
+				objectsToSave.push(subObject)
+				Object.keys(subObject.attributes).forEach(function(key){
+					var attribute = subObject.attributes[key];
+					listIncludedObjects(attribute.attribute)//switch to attribute.attribute
+					attribute.values.forEach(function(value){
+						listIncludedObjects(value)
+					})	
+				})
+			}
+		}
+		
+		listIncludedObjects(object)
+		
+		var remainingObjectsToSave = objectsToSave.length
+		
+		objectsToSave.forEach( function(objectToSave,index){
+			var json = serializeElement(objectToSave)
+			if (index === 0 ){console.log(json)}
+			$.ajax({
+				type: 'PUT',
+				url: '/standard/name/'+objectToSave.uuid,
+				data: json,
+				success: function(response) {
+					remainingObjectsToSave -= 1
+					if (remainingObjectsToSave === 0){
+						cb()
+					}
+				},
+				error: function(err) {
+					console.log('error posting to server...');
+					console.log(err);
+				}
+			});
+		
+		})	
+	},
+	
+	primitives: {
 		file:{
 			init:function(parentObject){
 			},
@@ -576,12 +702,12 @@ window.app = {
 			},
 			set:function(value){
 				
-				//console.log('string primitive set to ',value,'dependant',this.dependantPrimitives)
+				//console.log('string primitive set to ',value,'dependent',this.dependentPrimitives)
 				this.element = value;
 				this.update();
 			},
 			update:function(){
-				this.dependantPrimitives.forEach(function(primitive){
+				this.dependentPrimitives.forEach(function(primitive){
 					
 					primitive.update()
 				})
@@ -611,7 +737,7 @@ window.app = {
 				})
 				this.element.addEventListener('click',function(){
 					
-					var expObj = parentObject.dependantObjects[0].dependantObject.dependantObjects[0].dependantObject
+					var expObj = parentObject.dependentObjects[0].dependentObject.dependentObjects[0].dependentObject
 					if (parentObject.attributes.Pselected.values[0].primitive.element === false){
 						
 						app.select(expObj)
@@ -657,12 +783,12 @@ window.app = {
 			},
 			set:function(value){
 				
-				//console.log('string primitive set to ',value,'dependant',this.dependantPrimitives)
+				//console.log('string primitive set to ',value,'dependent',this.dependentPrimitives)
 				this.element = value;
 				this.update();
 			},
 			update:function(){
-				this.dependantPrimitives.forEach(function(primitive){
+				this.dependentPrimitives.forEach(function(primitive){
 					
 					primitive.update()
 				})
@@ -682,12 +808,12 @@ window.app = {
 			},
 			set:function(value){
 				
-				//console.log('string primitive set to ',value,'dependant',this.dependantPrimitives)
+				//console.log('string primitive set to ',value,'dependent',this.dependentPrimitives)
 				this.element = value;
 				this.update();
 			},
 			update:function(){
-				this.dependantPrimitives.forEach(function(primitive){
+				this.dependentPrimitives.forEach(function(primitive){
 					primitive.update()
 				})
 			}
