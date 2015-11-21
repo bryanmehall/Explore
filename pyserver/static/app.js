@@ -3,6 +3,12 @@ window.app = {
 	objectCounter: 0,
 	mapCreation: true,
 	visualizeGraph: false,
+	tempTable:{
+		fileUUID:'0zltxffg54zzt5xgwnf6wz3w',
+		childElements:'rm3vwsxcb5hl44l5ktptvz4z',
+		parentElement:'w69n9k17p5gxx6nyptx0xj40',
+		instanceOf:'x320kt1p9x4y3qkkp8n525yw'
+	},
 	
 	init: function(){
 		var objectTable = {
@@ -16,6 +22,7 @@ window.app = {
 				return undefined
 			}
 		}
+		app.jsonCache = Object.create(objectTable)
 		//table containing template objects (any object with an instance of it)
 		app.templateCache = Object.create(objectTable) //{uuid:object}
 		//table containing all objects currently in the file
@@ -36,42 +43,53 @@ window.app = {
 		});
 		return uuid;
 	},
+	
 	objectProto: {//contains shared methods of all objects
-		subscribe: function (attributeTypeUUID, callback){
-			var targetObject = this.attributes[attributeTypeUUID];
+		subscribe: function (attributeTypeUUID, linkFunction){
 			
-			if (targetObject != undefined){
-				targetObject.primitive.dependentPrimitives.push(this.primitive)
-				callback(primitive);
+			var targetObject = this.attributes[attributeTypeUUID];
+
+			var bufferObject = {
+				linkFunction: linkFunction,
+				parentObject: this
+			};
+			
+			if (this.attributePrimitiveBuffer.hasOwnProperty(attributeTypeUUID)){
+				this.attributePrimitiveBuffer[attributeTypeUUID].push(bufferObject)
+			} else {
+				this.attributePrimitiveBuffer[attributeTypeUUID] = [bufferObject];
+			};
+			
+			if (this.attributes.hasOwnProperty(attributeTypeUUID) &&targetObject.values.length !==0){
+				targetObject.values.forEach(function(value){
+					console.log('add functionality here')
+				})
 			}
-			else{
-				var x = this.attributePrimitiveBuffer[attributeTypeUUID];
-				this.attributePrimitiveBuffer[attributeTypeUUID] = (x === undefined) ? [] : x;
-				this.attributePrimitiveBuffer[attributeTypeUUID].push({primitive:this.primitive, callback:callback});
-			}
+			
 		},
 		initPrimitive: function(primitiveName, primitiveValue){
+			
 			var primitive = Object.create(app.primitives[primitiveName])
 			primitive.dependentPrimitives = [];
 			this.primitive = primitive;
 			primitive.init(this)
 			primitive.parseString(primitiveValue)
-			console.log('adding primitive')
 		},
-		addAttribute: function(attributeObject, inheritedUUID) { 
+		addAttribute: function(attributeObject) { 
 			var app = window.app
 			var parentObject = this;
-			
-			parentObject.attributes[inheritedUUID] = {attribute:attributeObject, values:[]}
-			console.log(attributeObject)
-			this.addAttributeToObjectVisualization(inheritedUUID, [])
-			
-		},	
-		newAddAttribute: function(attributeType, values) {
+			var attributeUUID = attributeObject.uuid//parentTypeUUID || attributeObject.getAttributeByUUID('uuid for instance of property')
+			//this.attributePrimitiveBuffer[attributeUUID] = []
+			parentObject.attributes[attributeUUID] = {attribute:attributeObject, values:[]}
+			this.addAttributeToObjectVisualization(attributeUUID, [])
+		},
+		getAttributeByUUID: function(typeUUID){
+			return this.attributes[typeUUID].values
+		},
+		newAddAttribute: function(attributeType, values) {//actually this is old 
 			var app = window.app
 			var parentObject = this;
 			values = values || []
-			console.log(attributeType)
 			var attributeObject = app.synchronousCreateInstance(attributeType)
 			this.attributes[attributeType] = {attribute:attributeObject, values:values}
 			
@@ -85,11 +103,6 @@ window.app = {
 				})
 			}
 			this.addAttributeToObjectVisualization(attributeType, values)
-		},	
-		findAttribute:function (attributeTypeString){
-			//eventually find in the prefered language
-			var object = this
-			//Object.keys(object.attributes).forEach()
 		},
 		replaceObject: function (newObject){
 			var dependentObjects = this.dependentObjects
@@ -99,11 +112,23 @@ window.app = {
 			})
 		},		
 		extendAttribute: function (attributeType,value){
-			//check cardinality
 			
-			this.attributes[attributeType].values.push(value)
-			this.addValueToAttribute
-			//add reading of attributePrimitive buffer
+			//check cardinality
+			var parentObject = this;
+			var valuesList = this.attributes[attributeType].values
+			valuesList.push(value)
+			this.addValueToAttribute(attributeType, value)//look at maybe delete?
+			if(this.attributePrimitiveBuffer.hasOwnProperty(attributeType)){
+				var bufferList  = this.attributePrimitiveBuffer[attributeType];
+				
+				bufferList.forEach(function(buffer){
+					
+					buffer.linkFunction(value, valuesList.length)//-1 to make 0 indexed
+					value.primitive.dependentPrimitives.push(buffer.parentObject.primitive)
+					
+					
+				})
+			}
 		},
 		referenceAttribute: function (parentObject, attributeType, valueIndex){//get rid of this. just have the value be what is intended and then deal with it in the replace attribute
 			var value = parentObject.attributes[attributeType].values[valueIndex]
@@ -135,16 +160,43 @@ window.app = {
 			this.accordianContainer.addEventListener('click', function(e){
 				e.stopPropagation()
 				app.select(obj)
-				document.getElementById('jsonText').innerText = app.serializeObject(obj)
-				app.saveObject(obj, function(){})
 			})
 			
-			if (this.hasOwnProperty('primitive')){
-				var primitiveDiv = document.createElement('div')
-				var primitiveData = this.primitive.save();
-				primitiveDiv.innerText = 'primitive:'+primitiveData.name+' '+primitiveData.value
-				this.accordianContainer.appendChild(primitiveDiv)
-			}
+			var primitiveDiv = document.createElement('div')
+			var selector = document.createElement('select')
+			
+			Object.keys(app.primitives).forEach(function(name){
+				var option = document.createElement('option')
+				option.innerText = name
+				option.value = name
+				selector.appendChild(option)
+			})
+			
+			
+			primitiveDiv.appendChild(selector)
+			
+			var primitiveValue = this.primitive.save().value;
+			var primitiveValueDiv = document.createElement('span')
+			primitiveValueDiv.style.width = '100%'
+			primitiveValueDiv.contentEditable = 'true'
+			primitiveValueDiv.innerHTML = primitiveValue;
+			primitiveDiv.appendChild(primitiveValueDiv)
+			
+			primitiveValueDiv.addEventListener('keyup', function(){
+				obj.primitive.parseString(primitiveValueDiv.innerText)
+			})
+			selector.addEventListener('change', function(event){
+				obj.initPrimitive(selector.value,primitiveValueDiv.innerText)
+			});
+			var primitiveName = this.primitive.save().name;
+			selector.value = primitiveName;
+			
+			
+			//obj.initPrimitive(selector.value,primitiveData.innerText)
+			
+			
+			this.accordianContainer.appendChild(primitiveDiv)
+			
 			
 			var attributeDiv = document.createElement('div')
 			attributeDiv.innerText = 'attributes'
@@ -171,14 +223,15 @@ window.app = {
 			attributeDiv.appendChild(addAttributeButton)
 			this.accordianContainer.appendChild(attributeDiv)
 			return this.accordianContainer
-		},
-		
+		},	
 		addAttributeToObjectVisualization: function(attributeType, values){
 			var obj = this
 			var attributeListDiv = this.accordianContainer.querySelector('.attributeList')
 			var attributeBlock = document.createElement('div')
 			attributeBlock.innerText = attributeType;
-			attributeBlock.class = attributeType;
+
+			attributeBlock.className = 'UUID'+attributeType;
+			
 			values.forEach(function(value){
 				attributeBlock.appendChild(value.accordianContainer)
 			})
@@ -191,17 +244,19 @@ window.app = {
 			addValueButton.className = 'button'
 			addValueButton.addEventListener('click', function(event){
 				app.newObjectSelector(null, null, function(newObject, typeUUID){
-					obj.extendAttribute(typeUUID,newObject)
+					console.log('adingValue')
+					obj.extendAttribute(attributeType,newObject)
 				})
 			})
 			
 			attributeBlock.appendChild(addValueButton)
 		},
-		
-		addValueToAttribute: function (attributeType){
+		addValueToAttribute: function (attributeType, value){
         	var obj = this;
-			var valueListDiv = this.accordianContainer.querySelector('.'+attributeType)
-			console.log(valueListDiv)
+			var valueListDiv = this.accordianContainer.querySelector('.UUID'+attributeType)
+			var valueDiv = document.createElement('div')
+			
+			valueListDiv.appendChild(value.accordianContainer)
 			
         }
 	},
@@ -262,7 +317,7 @@ window.app = {
 				})
 			}
 			
-			if (textArea.value[0] === '\\'){
+			if (textArea.value[0] === '\\' ||textArea.value[0] === '\_'){
 				var searchTerm = textArea.value.slice(1)
 				app.searchTemplates(searchTerm,function(matches){
 					if (matches.length === 1) {
@@ -271,13 +326,23 @@ window.app = {
 							//	app.fileObject.attributes.PselectedObjects.values[0].replaceObject(app.createObject(matches[0].templateID,{},function(){}))
 							//}else{
 							var singleMatch = matches[0][1]
-							app.asyncCreateInstance(singleMatch, function(ob){
-								app.selectingObject = false
-								var accordian = ob.addObjectToVisualization()
-								document.getElementById('accordianContainer').appendChild(accordian)
-								
-								cb(ob,singleMatch)
-								})
+							if (textArea.value[0] === '\\'){
+								app.createInstance(singleMatch, function(ob){
+									app.selectingObject = false
+									var accordian = ob.addObjectToVisualization()
+									document.getElementById('accordianContainer').appendChild(accordian)
+
+									cb(ob,singleMatch)
+									})
+							} else {
+								app.loadObject(singleMatch, function(ob){
+									app.selectingObject = false
+									var accordian = ob.addObjectToVisualization()
+									document.getElementById('accordianContainer').appendChild(accordian)
+
+									cb(ob,singleMatch)
+									})
+							}
 								//app.createObject(matches[0].[3],{},function(){})
 							//}
 					}
@@ -301,12 +366,15 @@ window.app = {
 	
 	select: function(selectedObject) {//should this be a method of the object?
 		if(!window.event.shiftKey) {
-			app.fileObject.attributes.eyh5mcvd0a7hz3t6b7z8vhtp.values.forEach(function(object){
-				app.deSelect(object)
-			})
+			var objRep = app.serializeElement(selectedObject)
+			document.getElementById('jsonText').innerText = JSON.stringify(objRep,'  ')
+			//console.log(app.fileObject)
+			//app.fileObject.attributes.eyh5mcvd0a7hz3t6b7z8vhtp.values.forEach(function(object){
+			//app.deSelect(object)
+			//})
 		}
 		selectedObject.accordianContainer.style.backgroundColor = '#ffaaaa'
-		this.fileObject.extendAttribute('eyh5mcvd0a7hz3t6b7z8vhtp', selectedObject)
+		//this.fileObject.extendAttribute('eyh5mcvd0a7hz3t6b7z8vhtp', selectedObject)
 		//selectedObject.attributes.Pselected.values[0].primitive.set(true)
 		
 	},
@@ -378,6 +446,23 @@ window.app = {
 				});
 	},
 	
+	newObject: function(nameEn, json, callback){
+		$.ajax({
+				type: 'POST',
+				url: '/object/new',
+				data: JSON.stringify({nameEn:nameEn, json:json}),
+				success: function(response) {
+					var data = JSON.parse(response);
+					//data is in the form: {uuid:'fjiwje...',json:json}
+					callback(data);
+				},
+				error: function(err) {
+					console.log('error posting to server...');
+					console.log(err);
+				}
+			});
+	},
+	
 	asyncCreateObject: function(templateUUID,cb) {
 		var app = this;
 		app.loadTemplate(templateUUID,function(template){
@@ -386,29 +471,52 @@ window.app = {
 		})
 	},
 	
-	asyncCreateInstance: function(parentUUID,cb) {
+	createInstance: function(parentUUID,cb) {
 		var app = this;
-		var newObject;
-		var create = function(){
-			newObject = app.synchronousCreateInstance(parentUUID)
-			app.newTemplate('core', 'instanceTest','',function(newUUID){
-				newObject.uuid = newUUID;
-				cb(newObject);
-			})
+		console.log(parentUUID, app.templateCache)
+		var create = function(templateUUID){
 			
+			var newObject = Object.create(app.objectProto);
+			newObject.attributes = {};
+			newObject.attributePrimitiveBuffer = {};
+			console.log('templateID',templateUUID, templateObject)
+			var templateObject = app.templateCache[templateUUID]
+			if (templateObject.hasOwnProperty('primitive')){
+				var primitiveString = templateObject.primitive.save()
+				newObject.initPrimitive(primitiveString.name, primitiveString.value)
+			}
+			newObject.addObjectToVisualization()
+			var instanceOfProperty = app.createObject(app.tempTable.instanceOf)
+			newObject.addAttribute(instanceOfProperty)
+			newObject.extendAttribute(app.tempTable.instanceOf, templateObject)
+			Object.keys(templateObject.attributes).forEach(function(attributeKey){//this needs fixing
+				var attributeObject = app.createObject(attributeKey)
+				newObject.addAttribute(attributeObject, templateUUID) //possible loop created here
+				templateObject.attributes[attributeKey].values.forEach(function(attributeValue){
+					var newValue = create(attributeValue.uuid)
+					console.log('instance')
+					newObject.extendAttribute(attributeKey,newValue)
+				})
+			})
+			return newObject
 		};
 		
-		
 		if (!app.templateCache.hasOwnProperty(parentUUID)){
-			app.asyncCreateObject(parentUUID, function(parentObject){
-				app.templateCache[parentUUID] = parentObject
-				create();
+			console.log('templateCache does not have property')
+			app.loadObject(parentUUID, function(parentObject){
 				
+				console.log('after', app.templateCache)
+				var newObject = create(parentUUID);
+				app.newObject('',app.serializeElement(newObject),function(response){
+					newObject.uuid = response.uuid
+					cb(newObject);
+				})
 			})
 		} else {
-			create();
+			console.log('templateCache has property')
+			var newObject = create(parentUUID);
+			cb(newObject);
 		}
-
 	},
 	
 	synchronousCreateInstance: function(templateUUID){
@@ -428,13 +536,14 @@ window.app = {
 			newObject.initPrimitive(primitiveString.name, primitiveString.value)
 		}
 		newObject.addObjectToVisualization()
-		var instanceOfProperty = app.synchronousCreateObject(app.templateCache['bbl3gf7bk9jvb3zqqr43zvpm'])
+		var instanceOfProperty = app.createObject(app.templateCache['bbl3gf7bk9jvb3zqqr43zvpm'])
 		newObject.addAttribute(instanceOfProperty, 'bbl3gf7bk9jvb3zqqr43zvpm')
 		console.log(newObject)
 		Object.keys(templateObject.attributes).forEach(function(attributeKey){//this needs fixing
 			var attributeObject = app.synchronousCreateInstance(attributeKey)
 			newObject.addAttribute(attributeObject, templateUUID)//possible loop created here
 			templateObject.attributes[attributeKey].values.forEach(function(attributeValue){
+				console.log('synchronous')
 				newObject.extendAttribute(attributeKey,attributeValue)
 			})
 		})
@@ -502,7 +611,7 @@ window.app = {
 		
 		return newObject
 	},
-
+	
 	serializeObject: function(object){
 		var referenceTable = []
 		var requiredTemplates = []
@@ -546,80 +655,160 @@ window.app = {
 		return JSON.stringify(serializedObject,undefined,2)
 	},
 	
+	loadJson:function(uuid,cb){
+		var app = this;
+		if (app.jsonCache.hasOwnProperty(uuid)) {
+			cb(app.templateCache[uuid])
+		} else {
+			$.getJSON('/object/'+uuid, function(template) {
+				app.jsonCache[uuid] = template;
+				var remainingAJAXRequests = template.dependentObjects.length
+				console.log('dependentObjects',template.dependentObjects)
+				if (remainingAJAXRequests === 0){
+					cb();
+				} else {
+					template.dependentObjects.forEach(function(UUID) {
+					app.loadObject(UUID, function(innerTemplate) {
+							remainingAJAXRequests -=1;
+							if (remainingAJAXRequests === 0) {
+								cb();
+							}
+						})
+					})
+				}
+			})
+			.fail(function(a, b, c) {
+				console.log('failed to load valid JSON file check that file is valid and there', uuid, a, b, c)
+			})
+		}
+	},
+	
 	loadObject:function(uuid,cb){
-		
+		app.loadJson(uuid,function(){
+			var object = app.createObject(uuid)
+			app.templateCache[uuid] = object;
+			cb(object);
+		})
 	},
 	
 	createObject:function(uuid){//load object only is called when loading 
 		//a template or loading objects from a file, not instantiating new objects
 		var app = this
-		
-		if (app.objectCache.hasOwnProperty(uuid)){
-			var template = app.objectCache[uuid];
+		if (app.jsonCache.hasOwnProperty(uuid)){
+			var template = app.jsonCache[uuid];
 		} else {
 			console.log('need to load json for ' + uuid + ' before calling createObject')
 			return 'eventually return undefined'
 		}
-		var newObject = Object.create(app.objectProto)
-		newObject.uuid = template.uuid
 		
-		if (template.hasOwnProperty('primitive')){
-			newObject.initPrimitive(template.primitive.name, template.primitive.value)
+		
+		
+		var parseAttrTemplate = function(attrTemplate){
+			//attrTemplate is in the form {type:attrObjectUUID, values:[ValueUUID or reference]}
+			var attrObjectUUID = attrTemplate.type;
+			var attributeObject = app.createObject(attrObjectUUID);
+			newObject.addAttribute(attributeObject);
+			
+			var attrValuesUUIDs = attrTemplate.values
+			
+			var parseValueTemplate = function(valueTemplate){
+				var value;
+				if (typeof(valueTemplate)==='string'){
+					value = app.createObject(valueTemplate)
+					
+				} else {
+					if (valueTemplate.refType === 'file'){
+						value = app.fileObjects.getKey(valueTemplate.ref)
+					} else if (valueTemplate.refType === 'user') {
+						value = app.userObjects.getKey(valueTemplate.ref)
+					}
+				}
+				var attributeParentUUID = attributeObject.uuid
+
+				newObject.extendAttribute(attributeParentUUID, value)
+			};
+			
+			attrValuesUUIDs.forEach(function(valueTemplate){
+				parseValueTemplate(valueTemplate)
+				
+			})
+		};
+
+		if (app.objectCache.hasOwnProperty(uuid)){
+			return app.objectCache[uuid]
+		} else {
+			var newObject = Object.create(app.objectProto)
+			newObject.uuid = template.uuid;
+			newObject.attributes = {};
+			newObject.attributePrimitiveBuffer = {};
+
+			
+			if (template.primitive.name !== null){
+				newObject.initPrimitive(template.primitive.name, template.primitive.value)
+			} else {
+				newObject.initPrimitive('none', null)
+			}
+
+			newObject.addObjectToVisualization()
+
+			template.attributes.forEach(function(attrTemplate){
+				parseAttrTemplate(attrTemplate);
+			});
+			app.objectCache[uuid]=newObject
+			return newObject
 		}
 		
-		newObject.addObjectToVisualization()
-		
-		template.attributes.forEach(function(attrTemplate){
-			
-		});
 	},
 	
-	
-	saveObject: function(object, cb){
-		var objectsToSave = [];
-		var dependentObjects = [];
+	serializeElement : function(element){//new verson of serialize object --replace when done
+		var obj = {};
+
+		var dependentObjects = []; //only direct descendants
+		var attributes = [];
+		//save primitive
+		
+		obj.primitive = element.primitive.save()
 		var addDepencency = function(includedObject){
 			//add uuid to dependent Objects if it is not already there
 			if (dependentObjects.indexOf(includedObject.uuid)===-1){
 				dependentObjects.push(includedObject.uuid)
 			}
-		}
-		
-		var serializeElement = function(element){
-			var obj = {};
-			obj.uuid = element.uuid
-			var dependentObjects = []; //only direct descendants
-			var attributes = [];
-			//save primitive
-			if (object.hasOwnProperty('primitive')){
-				obj.primitive = object.primitive.save()
-			}
+		};
 
-			//save attributes
-			Object.keys(object.attributes).forEach(function(key){
-				var attribute = object.attributes[key];
-				
-				var typeUUID = attribute.attribute.uuid
-				addDepencency(attribute.attribute)
-				var values = [];
-				attribute.values.forEach(function(value){
-					if (app.userObjects.getKey(value) !== undefined){
-						values.push({refType:'user', ref:app.userObjects.getKey(value)})
-					} else if (app.fileObjects.getKey(value) !== undefined){
-						values.push({refType:'file', ref:app.userObjects.getKey(value)})
-					} else {
-						values.push(value.uuid)
-						addDepencency(value)
-					}
-				})
-				
-				attributes.push({type:typeUUID, values:values})
+		//save attributes
+		Object.keys(element.attributes).forEach(function(key){
+			var attribute = element.attributes[key];
+
+			var typeUUID = attribute.attribute.uuid
+			addDepencency(attribute.attribute)
+			var values = [];
+			attribute.values.forEach(function(value){
+				if (app.userObjects.getKey(value) !== undefined){
+					values.push({refType:'user', ref:app.userObjects.getKey(value)})
+				} else if (app.fileObjects.getKey(value) !== undefined){
+					values.push({refType:'file', ref:app.userObjects.getKey(value)})
+				} else {
+					values.push(value.uuid)
+					addDepencency(value)
+				}
 			})
-			
-			obj.dependentObjects = dependentObjects;
-			obj.attributes = attributes
-			return JSON.stringify(obj)
-		}
+
+			attributes.push({type:typeUUID, values:values})
+		})
+
+		obj.uuid = element.uuid
+		obj.dependentObjects = dependentObjects;
+		obj.attributes = attributes
+		return obj
+	},
+		
+	saveObject: function(object, cb){
+		var objectsToSave = [];
+		var dependentObjects = [];	
+		var serializeElement = app.serializeElement
+		
+		
+		
 		
 		var listIncludedObjects = function(subObject){
 			if (objectsToSave.indexOf(subObject)=== -1){
@@ -633,18 +822,21 @@ window.app = {
 					})	
 				})
 			}
-		}
+		};
 		
 		listIncludedObjects(object)
 		
 		var remainingObjectsToSave = objectsToSave.length
 		
 		objectsToSave.forEach( function(objectToSave,index){
-			var json = serializeElement(objectToSave)
-			if (index === 0 ){console.log(json)}
+			var json = JSON.stringify(serializeElement(objectToSave))
+			if (index === 0 ){
+				console.log(json)
+			}
+			/*
 			$.ajax({
 				type: 'PUT',
-				url: '/standard/name/'+objectToSave.uuid,
+				url: '/object/'+objectToSave.uuid,
 				data: json,
 				success: function(response) {
 					remainingObjectsToSave -= 1
@@ -657,11 +849,21 @@ window.app = {
 					console.log(err);
 				}
 			});
+			*/
 		
-		})	
+		})
+		
 	},
 	
 	primitives: {
+		none:{
+			init:function(parentObject){
+			},
+			save:function(){
+				return {name:'none', value:null}
+			},
+			parseString(input){}
+		},
 		file:{
 			init:function(parentObject){
 			},
@@ -679,7 +881,7 @@ window.app = {
 				this.element.style.height = '200px'
 				this.element.style.backgroundColor = '#b7b7b7'
 				var appContainer = document.getElementById('appContainer')
-				console.log(appContainer, this.element)
+				
 				appContainer.appendChild(this.element);
 			},
 			save:function(){
@@ -712,28 +914,35 @@ window.app = {
 					primitive.update()
 				})
 			}
-			
 		},
 		span:{
 			init:function(parentObject){
 				var primitive = this
-				this.parentObject = parentObject
-				this.element = document.createElement('span')
-				parentObject.subscribe('PinnerText',function(attributeObjects){
-					attributeObjects.forEach(function(component){
-						var text = document.createTextNode(component.primitive.element)
-						primitive.element.appendChild(text)
-					})
-					//primitive.element.innerText = attributeObject.primitive.element///attribute not created when this is called
-				})
+				primitive.parentObject = parentObject
+				primitive.element = document.createElement('span')
 				
-				parentObject.subscribe('PparentElement',function(attributeObjects){
-					//console.log('attr obj',attributeObjects)
-					var attributeObject = attributeObjects[0]
-					attributeObject.primitive.element.appendChild(primitive.element)
-				})
+				var childElementAttributeUUID = app.tempTable.childElements
+				var childElementLinkFunction = function(childElement, index){
+					
+					var element = childElement.primitive.element
+					var subSpan;
+					if (typeof element==='string'){
+						subSpan = document.createElement('span')
+						subSpan.innerText = element;
+					} else {
+						subSpan = element;
+					}
+					primitive.element.appendChild(subSpan)
+				}
+				parentObject.subscribe(childElementAttributeUUID, childElementLinkFunction)
 				
-				parentObject.subscribe('Pselected',function(attributeObjects){
+				var parentElementAttributeUUID = app.tempTable.parentElement
+				var parentElementLinkFunction = function(parentElement, index){
+					parentElement.primitive.element.appendChild(primitive.element)
+				}
+				parentObject.subscribe(parentElementAttributeUUID, parentElementLinkFunction)
+				
+				/*parentObject.subscribe('Pselected',function(attributeObjects){
 				})
 				this.element.addEventListener('click',function(){
 					
@@ -746,21 +955,31 @@ window.app = {
 						app.deSelect(expObj)
 					}
 					
-				})
+				})*/
 			},
 			save:function(){
 				return {name:'span', value:null}
 			},
 			parseString(input){},
 			update:function(){
-				//hack a selection without dealing with color
-				if (this.parentObject.attributes.Pselected.values[0].primitive.element === true){
-					this.element.style.backgroundColor = 'red'
+				
+				var node = this.element
+				while (node.hasChildNodes()) {//make it update instead of replacing
+    				node.removeChild(node.lastChild);
 				}
-				else{
-					this.element.style.backgroundColor = 'transparent'
-				}
-				//this.element.innerText = this.parentObject.attributes.innerText.value.primitive.element
+				
+				this.parentObject.attributes[app.tempTable.childElements].values.forEach(function(value){
+					var element = value.primitive.element
+					var subSpan;
+					if (typeof element==='string'){
+						subSpan = document.createElement('span')
+						subSpan.innerText = element;
+					} else {
+						subSpan = element;
+					}
+					
+					node.appendChild(subSpan)
+				})
 			}
 		},
 		boolean:{
@@ -798,6 +1017,7 @@ window.app = {
 		string:{
 			init:function(parentObject){
 				this.parentObject = parentObject;
+				
 			},
 			save:function(){
 				return {name:'string', value:this.element}
@@ -813,6 +1033,7 @@ window.app = {
 				this.update();
 			},
 			update:function(){
+
 				this.dependentPrimitives.forEach(function(primitive){
 					primitive.update()
 				})
@@ -834,7 +1055,8 @@ window.app = {
 	}
 };
 
-//when loading object if it has a defined type then run a git merge operation on the stored template and on the subsection of the file. if the object template has an undefined then don't ask to merge
+//when loading object if it has a defined type then run a git merge operation on the stored template and on the 
+//subsection of the file. if the object template has an undefined then don't ask to merge
 
 
 

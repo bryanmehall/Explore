@@ -1,0 +1,76 @@
+<!doctype html>
+<head>
+	<script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+	<script>
+	window.onload = function(){
+		document.getElementById('navigation').addEventListener('click', function(e){
+			if (e.target.className === 'deleteButton'){
+				$.ajax({
+					type: 'POST',
+					url: '/core/filename/'+e.target.id+'/delete',
+					data: {
+						data: {}
+					},
+					success: function(response) {
+						e.target.parentNode.remove()
+					},
+					error: function(err) {
+						console.log('error posting to server...');
+						console.log(err);
+					}
+				});
+			}
+		})
+		
+		var addButton = document.getElementById('addButton')
+		var nameField = document.getElementById('nameField')
+		
+		addButton.addEventListener('click', function(){
+			if (nameField.value.indexOf(' ') ===-1 && nameField.value.length>0){
+				var data = JSON.stringify({nameEn:nameField.value})
+				$.ajax({
+					type: 'POST',
+					url: '/core/newfile',
+					data: data,
+					success: function(response) {
+						console.log('new file created:', response)
+						window.location.pathname = '/core/'+nameField.value+'/'+response
+					},
+					error: function(err) {
+						console.log('error creating file');
+						console.log(err);
+					}
+		    		});
+		    	} else {console.log('file name must not contain spaces')}
+		})
+	}
+	</script>
+<style>
+	.column-left{ float: left; width: 50%; }
+	.column-right{ float: right; width: 50%; }
+
+</style>
+</head>
+<body>
+	<title>Core</title>
+	<h1>Core</h2>
+	<div class="column-left">
+	<h2>Files</h2>
+		<div  id="navigation">
+			{% for item in fileList %}
+			   <div> <a href=/core/{{item[2]}}/{{item[1]}}>{{ item[2] }}</a> <button id={{item[1]}} class="deleteButton">x</button> </div>
+		    {% endfor %}
+		</div>
+		<div><input id="nameField"></input><button id="addButton">add file</button></div>
+	</div>
+	<div class="column-right">
+	<h2>Templates</h2>
+		<div id="templatesContainer">
+			{% for item in templateList %}
+			   <div> <a href=/core/{{item[2]}}/{{item[1]}}>{{ item[2] }}</a> <button id={{item[1]}} class="deleteButton">x</button> </div>
+		    {% endfor %}
+		</div>
+	</div>
+
+	
+</body>

@@ -1,0 +1,94 @@
+<!doctype html>
+<head>
+	<script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+	<script>
+	window.onload = function(){
+		var newObjectButton = document.getElementById('newObjectButton');
+		var objectsList = document.getElementById('objectsList');
+		$.ajax({
+			type: 'GET',
+			dataType: 'json',
+			url: '/objects',
+			data: '',
+			success: function(response) {
+				response.forEach(function(objEntry){
+					
+					addObjectEntry(objEntry[1],objEntry[2])
+				})
+			},
+			error: function(err) {
+				console.log('error posting to server...');
+				console.log(err);
+			}
+		});
+		var addObjectEntry = function(uuid,nameEn){
+			var objectEntry = document.createElement('div')
+
+			var link = document.createElement('a')
+			link.textContent = nameEn;
+			link.href = '/object/'+uuid;
+
+			var deleteButton = document.createElement('button');
+			deleteButton.textContent = 'x';
+			deleteButton.href = '/object/delete/'+uuid;
+			deleteButton.addEventListener('click',function(){
+				objectsList.removeChild(objectEntry);
+				$.ajax({
+					type: 'GET',
+					url: '/object/delete/'+uuid,
+					data: '',
+					success: function(response) {
+					},
+					error: function(err) {
+						console.log('error posting to server...');
+						console.log(err);
+					}
+				});
+			})
+
+			objectEntry.appendChild(link)
+			objectEntry.appendChild(deleteButton)
+			objectsList.appendChild(objectEntry)
+		};
+
+		newObjectButton.addEventListener('click',function(){
+			var nameEn = document.getElementById('newName').value
+			
+			
+			$.ajax({
+				type: 'POST',
+				url: '/object/new',
+				data: JSON.stringify({nameEn:nameEn, json:null}),
+				success: function(response) {
+					var data = JSON.parse(response);
+					var uuid = data.uuid;
+					var json = data.json;
+					addObjectEntry(uuid,nameEn);
+				},
+				error: function(err) {
+					console.log('error posting to server...');
+					console.log(err);
+				}
+			});
+		})
+	}
+	</script>
+<style>
+	.column-left{ float: left; width: 50%; }
+	.column-right{ float: right; width: 50%; }
+
+</style>
+</head>
+<body>
+	
+	<h1>Objects</h2>
+	<div class="column-left">
+		<div  id="objectsList">
+				
+		</div>
+		<button id="newObjectButton">addObject</button>
+		<input id = "newName"></input>
+	</div>
+
+	
+</body>

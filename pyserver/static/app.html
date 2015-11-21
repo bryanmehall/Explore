@@ -1,0 +1,52 @@
+<!doctype html>
+<head>
+
+	<script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+	<script src="http://cdnjs.cloudflare.com/ajax/libs/d3/2.10.0/d3.v2.min.js"></script>
+	
+	<script src="/static/app.js"></script>
+	<script src="/static/init.js"></script>
+	<script src="/static/debugVis.js"></script>
+
+	<style>
+		.column-left{ float: left; width: 33%; }
+		.column-right{ float: right; width: 33%; }
+		.column-center{ display: inline-block; width: 33%; }
+		.button{
+			background: #dfdfdf;
+			cursor: pointer;
+		}
+	</style>
+
+</head>
+
+<body>
+
+	<a href="/">User Home</a>
+	<button id="saveFile"> save file</button>
+	<div id="saveTemplateDiv">
+		Template:
+		<button id="commitTemplate">commit selected</button>
+		<button id="forkTemplate">fork selected</button>
+		<button id="newTemplate">new</button>
+		
+	</div>
+	
+	<div class="container">
+		<div  class="column-center">
+			<h2>view</h2>
+	   		<div id="appContainer">
+	   			
+	   		</div>
+   		</div>
+   		<div id="accordianContainer" class="column-left">
+   			<h2>accordian tree</h2>
+   		</div>
+   		<div class="column-right">
+   			<h2>JSON</h2>
+   			<pre contentEditable="true" id="jsonText"></pre>
+		</div>
+	</div>
+	
+
+</body>
