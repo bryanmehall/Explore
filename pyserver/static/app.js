@@ -4,10 +4,13 @@ window.app = {
 	mapCreation: true,
 	visualizeGraph: false,
 	tempTable:{
-		fileUUID:'0zltxffg54zzt5xgwnf6wz3w',
-		childElements:'rm3vwsxcb5hl44l5ktptvz4z',
-		parentElement:'w69n9k17p5gxx6nyptx0xj40',
-		instanceOf:'x320kt1p9x4y3qkkp8n525yw'
+		fileUUID:'52948f7xy30mc2vxtzzk25vz',
+		childElements:'qnjdr5lz634c33274w3xp5bx',
+		parentElement:'jx1xlsnh3jxn71fdv0rn9fqa',
+		instanceOf:'zhtag5fdnn0bksyd2wwccd3a',
+		selectedObjects:'l2zb7d75718y75scnmkb039a',
+		parentConcept:'sk2l251w56378glk49adbvnd',
+		nameEn:'2bnzdw749n76kq12932yzysx'
 	},
 	
 	init: function(){
@@ -20,7 +23,14 @@ window.app = {
 					}
 				})
 				return undefined
+			},
+			addEntry:function(key, value){
+				this[key] = value
+			},
+			clear:function(){
+				
 			}
+			
 		}
 		app.jsonCache = Object.create(objectTable)
 		//table containing template objects (any object with an instance of it)
@@ -32,6 +42,7 @@ window.app = {
 		//table with all file reference 
 		app.fileObjects = Object.create(objectTable) //{fileIdentifier:object}
 		app.userObjects = Object.create(objectTable) //{useridentifier: object}
+		app.selectedObjects = Object.create(objectTable)
 	},
 	
 	generateUUID : function(){
@@ -81,7 +92,7 @@ window.app = {
 			var attributeUUID = attributeObject.uuid//parentTypeUUID || attributeObject.getAttributeByUUID('uuid for instance of property')
 			//this.attributePrimitiveBuffer[attributeUUID] = []
 			parentObject.attributes[attributeUUID] = {attribute:attributeObject, values:[]}
-			this.addAttributeToObjectVisualization(attributeUUID, [])
+			this.addAttributeToObjectVisualization(attributeObject, [])
 		},
 		getAttributeByUUID: function(typeUUID){
 			return this.attributes[typeUUID].values
@@ -102,7 +113,7 @@ window.app = {
 					primitiveLink.callback(values)
 				})
 			}
-			this.addAttributeToObjectVisualization(attributeType, values)
+			this.addAttributeToObjectVisualization(attributeObject, values)
 		},
 		replaceObject: function (newObject){
 			var dependentObjects = this.dependentObjects
@@ -113,9 +124,14 @@ window.app = {
 		},		
 		extendAttribute: function (attributeType,value){
 			
-			//check cardinality
 			var parentObject = this;
 			var valuesList = this.attributes[attributeType].values
+			
+			switch(attributeType){
+				case 'cbrqn2p9fplw1xrgbln80q9y':
+					
+					break;
+			}
 			valuesList.push(value)
 			this.addValueToAttribute(attributeType, value)//look at maybe delete?
 			if(this.attributePrimitiveBuffer.hasOwnProperty(attributeType)){
@@ -151,12 +167,14 @@ window.app = {
 		setAttributeToValue: function (attributeType, index, value){
 			
 		},
+		
 		addObjectToVisualization: function (){
 			var obj = this
 			this.accordianContainer = document.createElement('div')
 			this.accordianContainer.style.marginLeft = '10px'
 			this.accordianContainer.style.marginTop = '10px'
-			
+			this.accordianContainer.className = 'accordianObject'
+			this.accordianContainer.parentObject = this
 			this.accordianContainer.addEventListener('click', function(e){
 				e.stopPropagation()
 				app.select(obj)
@@ -213,6 +231,7 @@ window.app = {
 				app.newObjectSelector(null, null, function(newObject,typeUUID){
 					console.log('outside add attribute', typeUUID)
 					obj.addAttribute(newObject,typeUUID)
+					//obj.addAttributeToObjectVisualization(attributeType,[])
 				})
 			})
 			
@@ -223,12 +242,19 @@ window.app = {
 			attributeDiv.appendChild(addAttributeButton)
 			this.accordianContainer.appendChild(attributeDiv)
 			return this.accordianContainer
-		},	
-		addAttributeToObjectVisualization: function(attributeType, values){
+		},
+		
+		addAttributeToObjectVisualization: function(attributeObject, values){
 			var obj = this
 			var attributeListDiv = this.accordianContainer.querySelector('.attributeList')
 			var attributeBlock = document.createElement('div')
-			attributeBlock.innerText = attributeType;
+			var attributeType = attributeObject.uuid;
+			if(attributeObject.attributes.hasOwnProperty(app.tempTable.nameEn)){
+				attributeBlock.innerText = attributeObject.attributes[app.tempTable.nameEn].values[0].primitive.element;
+			} else {
+				attributeBlock.innerText = attributeType;
+			}
+			
 
 			attributeBlock.className = 'UUID'+attributeType;
 			
@@ -285,11 +311,15 @@ window.app = {
 	
 	newObjectSelector:function(typeRestrictions, eventLocation, cb) {
 		var typeRestrictions = typeRestrictions || [];
-		var box = document.createElement('div');
-		app.selectingObject = true;
-		box.style.position = 'absolute'
-		box.style.top = '100px'
+		var box =              document.createElement('div');
+		var accordianDiv =     document.getElementById('accordianContainer');
+		var accordianObjects = document.querySelectorAll('.accordianObject');
+		
+		app.selectingObject       = true;
+		box.style.position        = 'absolute'
+		box.style.top             = '100px'
 		box.style.backgroundColor = '#fafafa'
+		
 		var textArea = document.createElement('input');
 		box.appendChild(textArea)
 		
@@ -297,13 +327,38 @@ window.app = {
 		box.appendChild(options)
 		var appDiv = document.getElementById('appContainer')
 		appDiv.appendChild(box)
+		var accordianObjectsList = []
+		for (var i = 0; i < accordianObjects.length; i++){
+			accordianObjectsList.push(accordianObjects[i]);
+
+		}
+		
+		accordianObjectsList.forEach(function(accordianObject,index){
+			var targetBox = document.createElement('div')
+			targetBox.innerText = '@'
+			targetBox.className = 'target'
+			targetBox.addEventListener('click', function(){
+				closeSelectionBox()
+				cb(accordianObject.parentObject, accordianObject.parentObject.uuid)
+			})
+			accordianObject.appendChild(targetBox)
+		})
 		
 		document.addEventListener('keyup', function(event){
 			if (event.keyCode === 27){
-				appDiv.removeChild(box)
+				closeSelectionBox()
 				app.selectingObject = false
 			}
 		})
+		
+		
+		var closeSelectionBox = function(){
+			var targets = document.querySelectorAll('.target')
+			for (var i = 0; i < targets.length; i++){
+				targets[i].parentNode.removeChild(targets[i])
+			}
+			box.parentNode.removeChild(box)	
+		};
 		
 		var inputChangeHandler = function() {
 			var newOptions = document.createElement('div');
@@ -321,25 +376,23 @@ window.app = {
 				var searchTerm = textArea.value.slice(1)
 				app.searchTemplates(searchTerm,function(matches){
 					if (matches.length === 1) {
-							appDiv.removeChild(box)
-							//if (app.fileObject.attributes.PselectedObjects.values.length === 1){	
-							//	app.fileObject.attributes.PselectedObjects.values[0].replaceObject(app.createObject(matches[0].templateID,{},function(){}))
-							//}else{
 							var singleMatch = matches[0][1]
+							
 							if (textArea.value[0] === '\\'){
 								app.createInstance(singleMatch, function(ob){
 									app.selectingObject = false
 									var accordian = ob.addObjectToVisualization()
-									document.getElementById('accordianContainer').appendChild(accordian)
-
+									//accordianDiv.appendChild(accordian)
+									closeSelectionBox()
 									cb(ob,singleMatch)
 									})
 							} else {
 								app.loadObject(singleMatch, function(ob){
+									
 									app.selectingObject = false
 									var accordian = ob.addObjectToVisualization()
-									document.getElementById('accordianContainer').appendChild(accordian)
-
+									console.log('creating', accordianDiv,ob.accordianContainer)
+									closeSelectionBox()
 									cb(ob,singleMatch)
 									})
 							}
@@ -365,24 +418,25 @@ window.app = {
 	},
 	
 	select: function(selectedObject) {//should this be a method of the object?
+		app.currentObject = selectedObject
 		if(!window.event.shiftKey) {
 			var objRep = app.serializeElement(selectedObject)
-			document.getElementById('jsonText').innerText = JSON.stringify(objRep,'  ')
-			//console.log(app.fileObject)
-			//app.fileObject.attributes.eyh5mcvd0a7hz3t6b7z8vhtp.values.forEach(function(object){
-			//app.deSelect(object)
-			//})
+			document.getElementById('jsonText').innerHTML = JSON.stringify(objRep,null,2)
+			console.log(app.fileObject)
+			app.fileObject.attributes[app.tempTable.selectedObjects].values.forEach(function(object){
+			app.deSelect(object)
+			})
 		}
 		selectedObject.accordianContainer.style.backgroundColor = '#ffaaaa'
-		//this.fileObject.extendAttribute('eyh5mcvd0a7hz3t6b7z8vhtp', selectedObject)
-		//selectedObject.attributes.Pselected.values[0].primitive.set(true)
+		//app.fileObject.extendAttribute(app.tempTable.selectedObjects, selectedObject)
+		//selectedObject.attributes[app.tempTeble.selectedObjects].values[0].primitive.set(true)
 		
 	},
 	
 	deSelect: function(selectedObject) {
 		selectedObject.accordianContainer.style.backgroundColor = 'white'
 		//selectedObject.attributes.Pselected.values[0].primitive.set(false)
-		this.fileObject.removeAttributeValue('eyh5mcvd0a7hz3t6b7z8vhtp',selectedObject)
+		//this.fileObject.removeAttributeValue(app.tempTable.selectedObjects,selectedObject)
 		
 	},
 	
@@ -656,6 +710,7 @@ window.app = {
 	},
 	
 	loadJson:function(uuid,cb){
+		console.log('loading', uuid)
 		var app = this;
 		if (app.jsonCache.hasOwnProperty(uuid)) {
 			cb(app.templateCache[uuid])
@@ -734,7 +789,7 @@ window.app = {
 			})
 		};
 
-		if (app.objectCache.hasOwnProperty(uuid)){
+		if (app.objectCache.hasOwnProperty(uuid)){//if object with this uuid already exists then return reference to it
 			return app.objectCache[uuid]
 		} else {
 			var newObject = Object.create(app.objectProto)
@@ -744,6 +799,7 @@ window.app = {
 
 			
 			if (template.primitive.name !== null){
+				console.log('initializing primitive',template.primitive.name, template.primitive.value )
 				newObject.initPrimitive(template.primitive.name, template.primitive.value)
 			} else {
 				newObject.initPrimitive('none', null)
@@ -768,6 +824,7 @@ window.app = {
 		//save primitive
 		
 		obj.primitive = element.primitive.save()
+		console.log(element.uuid, obj.primitive)
 		var addDepencency = function(includedObject){
 			//add uuid to dependent Objects if it is not already there
 			if (dependentObjects.indexOf(includedObject.uuid)===-1){
@@ -830,10 +887,7 @@ window.app = {
 		
 		objectsToSave.forEach( function(objectToSave,index){
 			var json = JSON.stringify(serializeElement(objectToSave))
-			if (index === 0 ){
-				console.log(json)
-			}
-			/*
+			console.log(json)
 			$.ajax({
 				type: 'PUT',
 				url: '/object/'+objectToSave.uuid,
@@ -849,7 +903,7 @@ window.app = {
 					console.log(err);
 				}
 			});
-			*/
+			
 		
 		})
 		
@@ -987,13 +1041,14 @@ window.app = {
 				this.parentObject = parentObject;
 			},
 			save:function(){
+				console.log(this.element)
 				return {name:'boolean', value:this.element}
 			},
 			parseString:function(input){
-				if (input === 'true'){
+				if (input === 'true'||input===true){
 					this.set(true)
 					return true
-				} else if (input === 'false') {
+				} else if (input === 'false'||input===false) {
 					this.set(false)
 					return true
 				} else {
@@ -1041,8 +1096,27 @@ window.app = {
 		},
 		IEEEFloatingPoint:{
 
-			init:function(){},
-			element:null
+			init:function(parentObject){
+				this.element = 0
+			},
+			save:function(){
+				return {name:'IEEEFloatingPoint', value:this.element}
+			},
+			parseString:function(input){
+				this.set(parseInt(input))
+				return true
+			},
+			set:function(value){
+				
+				//console.log('string primitive set to ',value,'dependent',this.dependentPrimitives)
+				this.element = value;
+				this.update();
+			},
+			update:function(){
+				this.dependentPrimitives.forEach(function(primitive){
+					primitive.update()
+				})
+			}
 		},	
 		additionOperator:{
 
@@ -1050,8 +1124,81 @@ window.app = {
 			save:function(){
 				return {name:'additionOperator', value:null}
 			},
-			element:null
-		}	
+			element:null,
+			parseString:function(input){
+				return true
+			},
+			set:function(value){
+				
+				//console.log('string primitive set to ',value,'dependent',this.dependentPrimitives)
+			},
+			update:function(){
+
+				this.dependentPrimitives.forEach(function(primitive){
+					primitive.update()
+				})
+			}
+		},
+		numberTextRepresentation:{
+			init:function(parentObject){
+				var primitive = this
+				primitive.parentObject = parentObject
+				primitive.element = document.createElement('span')
+				
+				var parentConceptAttributeUUID = app.tempTable.parentConcept
+				var parentConceptLinkFunction = function(parentNumber, index){
+					
+					var number = parentNumber.primitive.element
+					var stringRep = number.toString();
+					primitive.element.innerText = stringRep;
+				}
+				parentObject.subscribe(parentConceptAttributeUUID, parentConceptLinkFunction)
+				
+				var parentElementAttributeUUID = app.tempTable.parentElement
+				var parentElementLinkFunction = function(parentElement, index){
+					parentElement.primitive.element.appendChild(primitive.element)
+				}
+				parentObject.subscribe(parentElementAttributeUUID, parentElementLinkFunction)
+				
+				/*parentObject.subscribe('Pselected',function(attributeObjects){
+				})
+				this.element.addEventListener('click',function(){
+					
+					var expObj = parentObject.dependentObjects[0].dependentObject.dependentObjects[0].dependentObject
+					if (parentObject.attributes.Pselected.values[0].primitive.element === false){
+						
+						app.select(expObj)
+						
+					}else{
+						app.deSelect(expObj)
+					}
+					
+				})*/
+			},
+			save:function(){
+				return {name:'numberTextRepresentation', value:null}
+			},
+			parseString(input){
+				var number = parseInt(input)
+				if (! isNaN(number)){
+					
+					this.parentObject.attributes[app.tempTable.parentConcept].values[0].primitive.set(number)
+					return true
+				} else {
+					return false
+				}
+			},
+			update:function(){
+				
+				var number = this.parentObject.attributes[app.tempTable.parentConcept].values[0].primitive.element
+				var stringRep = number.toString();
+				this.element.innerText = stringRep;
+				
+				this.dependentPrimitives.forEach(function(primitive){
+					primitive.update()
+				})
+			}
+		}
 	}
 };
 

@@ -4,14 +4,15 @@ window.onload = function(){
 	app.init()
 	
 	var saveToFile = function(){
-		var json = app.serializeObject(app.fileObject)//change to selected object
+		var jsonData = app.serializeObject(app.fileObject)//change to selected object
+		JSON.stringify(jsonData,null, 2)
 		$.ajax({
 			type: 'PUT',
 			url: path,
 			data: json,
 			success: function(response) {
 				console.log('sent to server', response)
-				document.getElementById('jsonText').innerText = json
+				document.getElementById('jsonText').innerHTML = json
 			},
 			error: function(err) {
 				console.log('error posting to server...');
@@ -22,21 +23,8 @@ window.onload = function(){
 
 	
 	var commitTemplate = function(){
+		app.saveObject(app.currentObject, function(){})
 		var json = document.getElementById('jsonText').innerText//app.serializeElement(app.currentObject)
-		//do check that uuid in json and url match also do this on server side
-		$.ajax({
-			type: 'PUT',
-			url: path,
-			data: json,
-			success: function(response) {
-				console.log('sent to server', response)
-				document.getElementById('jsonText').innerText = json
-			},
-			error: function(err) {
-				console.log('error posting to server...');
-				console.log(err);
-			}
-		});
 	};
 	
 	var addTemplateHandler = function(){
