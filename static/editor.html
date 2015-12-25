@@ -15,6 +15,23 @@
 			background: #dfdfdf;
 			cursor: pointer;
 		}
+
+		.link {
+		  stroke: #000;
+		  stroke-width: 1.5px;
+		}
+
+		.node {
+		  fill: #000;
+		  stroke: #fff;
+		  stroke-width: 1.5px;
+		}
+
+		.node.a { fill: #48b4ff; }
+		.node.b { fill: #ff7f0e; }
+		.node.c { fill: #03ff03; }
+
+
 	</style>
 
 </head>
@@ -43,9 +60,10 @@
    		</div>
    		<div class="column-right">
    			<h2>JSON</h2>
-   			<pre contentEditable="true" id="jsonText"></pre>
+   			<pre id="jsonText"></pre>
 		</div>
 	</div>
+	<div id="objectDiv"></div>
 	
-
+	<script src="//d3js.org/d3.v3.min.js"></script>
 </body>

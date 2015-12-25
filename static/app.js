@@ -4,15 +4,14 @@ window.app = {
 	mapCreation: true,
 	visualizeGraph: false,
 	tempTable:{
-		fileUUID:'52948f7xy30mc2vxtzzk25vz',
-		childElements:'qnjdr5lz634c33274w3xp5bx',
-		parentElement:'jx1xlsnh3jxn71fdv0rn9fqa',
-		instanceOf:'zhtag5fdnn0bksyd2wwccd3a',
-		selectedObjects:'l2zb7d75718y75scnmkb039a',
-		parentConcept:'sk2l251w56378glk49adbvnd',
-		nameEn:'2bnzdw749n76kq12932yzysx'
+		fileUUID:'m85xp0dfrth1t1sbn9wrv77q',
+		childElements:'jhkr9c44a68qs54rk3addmv8',
+		parentElement:'5grmpy33zd3tkljbhs2j04ar',
+		instanceOf:'z77dxvw1fpa4xxcy49r0klmg',
+		selectedObjects:'cw3s6fl6s3p9rvqyh90d108x',
+		parentConcept:'mkccvvqh38apgddwn08zx11v',
+		nameEn:'dfzz0y7g6x55pq6rag5pyw43'
 	},
-	
 	init: function(){
 		var objectTable = {
 			getKey: function(value){
@@ -43,16 +42,65 @@ window.app = {
 		app.fileObjects = Object.create(objectTable) //{fileIdentifier:object}
 		app.userObjects = Object.create(objectTable) //{useridentifier: object}
 		app.selectedObjects = Object.create(objectTable)
+		app.vis.init()
 	},
-	
-	generateUUID : function(){
-		var d = new Date().getTime();
-		var uuid = 'untrustedxxxxxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-			var r = (d + Math.random()*16)%16 | 0;
-			d = Math.floor(d/16);
-			return (c=='x' ? r : (r&0x3|0x8)).toString(16);
-		});
-		return uuid;
+	vis:{
+		nodes:[],
+		links:[],
+		init:function(){
+			var width = 960,
+    			height = 500;
+
+			var color = d3.scale.category10();
+			var force = d3.layout.force()
+				.nodes(app.vis.nodes)
+				.links(app.vis.links)
+				.charge(-400)
+				.linkDistance(120)
+				.size([width, height])
+				.on("tick", tick);
+
+			app.vis.svg = d3.select("body").append("svg")
+				.attr("width", width)
+			   .attr("height", height);
+
+			var node = app.vis.svg.selectAll(".node"),
+				link = app.vis.svg.selectAll(".link");
+
+			app.vis.start = function() {
+				link = link.data(force.links(), function(d) { return d.source.id + "-" + d.target.id; });
+				link.enter().insert("line", ".node").attr("class", "link");
+				link.exit().remove();
+				
+				node = node.data(force.nodes(), function(d) { return d.id;});
+				var objectDiv = document.getElementById('objectDiv')
+				node.enter()
+					.append("circle")
+					.attr("class", function(d) { return "node " + d.id; })
+					.attr("r", 8)
+					.on("click", function(d){
+						var objectContainer = d.object.accordianContainer;
+						while (objectDiv.hasChildNodes()) {//make it update instead of replacing
+    						objectDiv.removeChild(objectDiv.lastChild);
+						}
+						objectDiv.appendChild(objectContainer)
+					})
+			  
+			  node.exit().remove();
+
+			  force.start();
+			}
+
+			function tick() {
+			  node.attr("cx", function(d) { return d.x; })
+				  .attr("cy", function(d) { return d.y; })
+
+			  link.attr("x1", function(d) { return d.source.x; })
+				  .attr("y1", function(d) { return d.source.y; })
+				  .attr("x2", function(d) { return d.target.x; })
+				  .attr("y2", function(d) { return d.target.y; });
+			}
+		}
 	},
 	
 	objectProto: {//contains shared methods of all objects
@@ -94,26 +142,9 @@ window.app = {
 			parentObject.attributes[attributeUUID] = {attribute:attributeObject, values:[]}
 			this.addAttributeToObjectVisualization(attributeObject, [])
 		},
-		getAttributeByUUID: function(typeUUID){
+		getAttributeByUUID: function(typeUUID, index){
+			//add support for transitive relations
 			return this.attributes[typeUUID].values
-		},
-		newAddAttribute: function(attributeType, values) {//actually this is old 
-			var app = window.app
-			var parentObject = this;
-			values = values || []
-			var attributeObject = app.synchronousCreateInstance(attributeType)
-			this.attributes[attributeType] = {attribute:attributeObject, values:values}
-			
-			
-			if (this.attributePrimitiveBuffer.hasOwnProperty(attributeType)&&this.hasOwnProperty('primitive')) {//attribute primitive buffer enumerates all of the objects that its own primitive depends on so 
-				this.attributePrimitiveBuffer[attributeType].forEach(function(primitiveLink){
-					values.forEach(function(value){
-						value.primitive.dependentPrimitives.push(primitiveLink.primitive)
-					})
-					primitiveLink.callback(values)
-				})
-			}
-			this.addAttributeToObjectVisualization(attributeObject, values)
 		},
 		replaceObject: function (newObject){
 			var dependentObjects = this.dependentObjects
@@ -121,7 +152,7 @@ window.app = {
 				reference.dependentObject.setAttribute(reference.attributeType, newObject, reference.valueIndex)
 				console.log('setting attribute', reference.attributeType, newObject)
 			})
-		},		
+		},	
 		extendAttribute: function (attributeType,value){
 			
 			var parentObject = this;
@@ -146,11 +177,6 @@ window.app = {
 				})
 			}
 		},
-		referenceAttribute: function (parentObject, attributeType, valueIndex){//get rid of this. just have the value be what is intended and then deal with it in the replace attribute
-			var value = parentObject.attributes[attributeType].values[valueIndex]
-			value.dependentObjects.push(this)
-			return value
-		},
 		removeAttributeValue: function (attributeType,value){//remove instance of 'value' from values of 'attributetype'
 			//check cardinality
 			//check if order matters
@@ -167,7 +193,6 @@ window.app = {
 		setAttributeToValue: function (attributeType, index, value){
 			
 		},
-		
 		addObjectToVisualization: function (){
 			var obj = this
 			this.accordianContainer = document.createElement('div')
@@ -229,7 +254,6 @@ window.app = {
 			addAttributeButton.className = 'button'
 			addAttributeButton.addEventListener('click', function(event){
 				app.newObjectSelector(null, null, function(newObject,typeUUID){
-					console.log('outside add attribute', typeUUID)
 					obj.addAttribute(newObject,typeUUID)
 					//obj.addAttributeToObjectVisualization(attributeType,[])
 				})
@@ -241,9 +265,12 @@ window.app = {
 			attributeDiv.appendChild(attrListDiv)
 			attributeDiv.appendChild(addAttributeButton)
 			this.accordianContainer.appendChild(attributeDiv)
+			
+			//add node to graph
+			app.vis.nodes.push({id:obj.uuid, object:obj})
+			app.vis.start()
 			return this.accordianContainer
 		},
-		
 		addAttributeToObjectVisualization: function(attributeObject, values){
 			var obj = this
 			var attributeListDiv = this.accordianContainer.querySelector('.attributeList')
@@ -270,7 +297,6 @@ window.app = {
 			addValueButton.className = 'button'
 			addValueButton.addEventListener('click', function(event){
 				app.newObjectSelector(null, null, function(newObject, typeUUID){
-					console.log('adingValue')
 					obj.extendAttribute(attributeType,newObject)
 				})
 			})
@@ -283,7 +309,20 @@ window.app = {
 			var valueDiv = document.createElement('div')
 			
 			valueListDiv.appendChild(value.accordianContainer)
-			
+			var getById = function(id){
+				var nodes = app.vis.nodes;
+				for (var i=0; i<nodes.length; i++){
+					if (nodes[i].id === id){
+						return nodes[i]
+					}
+				}
+				console.log('didnt find any')
+			}
+			var source = getById(this.uuid)
+			var target = getById(value.uuid)
+			console.log('linking',source,target)
+			app.vis.links.push({source: source, target: target});
+			app.vis.start()
         }
 	},
 	   
@@ -296,8 +335,8 @@ window.app = {
 				cb(JSON.parse(response))
 			},
 			error: function(err) {
-				console.log('error posting to server...');
-				console.log(err);
+				console.log('error posting to server...', err);
+				
 			}
 		});
 	},
@@ -310,15 +349,16 @@ window.app = {
 	},
 	
 	newObjectSelector:function(typeRestrictions, eventLocation, cb) {
-		var typeRestrictions = typeRestrictions || [];
-		var box =              document.createElement('div');
-		var accordianDiv =     document.getElementById('accordianContainer');
-		var accordianObjects = document.querySelectorAll('.accordianObject');
+		//open object search functionality
+		var typeRestrictions 	= typeRestrictions || [];
+		var box 				= document.createElement('div');
+		var accordianDiv 		= document.getElementById('accordianContainer');
+		var accordianObjects 	= document.querySelectorAll('.accordianObject');
 		
-		app.selectingObject       = true;
-		box.style.position        = 'absolute'
-		box.style.top             = '100px'
-		box.style.backgroundColor = '#fafafa'
+		app.selectingObject       	= true;
+		box.style.position        	= 'absolute'
+		box.style.top             	= '100px'
+		box.style.backgroundColor 	= '#fafafa'
 		
 		var textArea = document.createElement('input');
 		box.appendChild(textArea)
@@ -455,35 +495,8 @@ window.app = {
 		})
 	},
 	
-	loadTemplate: function(templateUUID, callback) {//change function name to loadJSON
-		var app = this;
-		if (app.templateCache[templateUUID] === undefined) {
-		
-			$.getJSON('/templates/'+templateUUID, function(template) {
-				app.templateCache[templateUUID] = template;
-				var remainingAJAXRequests = template.includedObjects.length
-				if (remainingAJAXRequests === 0){callback(template)}
-				template.includedObjects.forEach(function(UUID) {
-					app.loadTemplate(UUID, function(innerTemplate) {
-						remainingAJAXRequests -=1;
-						if (remainingAJAXRequests === 0) {
-							callback(template);
-						}
-					})
-				})
-				
-			})
-			.fail(function(a, b, c) {
-			
-				console.log('failed to load valid JSON file check that file is valid and there', templateID, a, b, c)
-			})
-		}
-		else {
-			callback(app.templateCache[templateID])
-		}
-	},
-	
-	newTemplate: function(user, json, nameEn,cb){//move to app file
+	newTemplate: function(user, json, nameEn,cb){
+		//adds new template with name
 		var newTemplatePath = '/'+user+'/newTemplate'
 		var test = $.ajax({
 					type: 'POST',
@@ -501,6 +514,7 @@ window.app = {
 	},
 	
 	newObject: function(nameEn, json, callback){
+		//creates new object
 		$.ajax({
 				type: 'POST',
 				url: '/object/new',
@@ -515,14 +529,6 @@ window.app = {
 					console.log(err);
 				}
 			});
-	},
-	
-	asyncCreateObject: function(templateUUID,cb) {
-		var app = this;
-		app.loadTemplate(templateUUID,function(template){
-			var newObject = app.synchronousCreateObject(template)
-			cb(newObject);
-		})
 	},
 	
 	createInstance: function(parentUUID,cb) {
@@ -573,144 +579,7 @@ window.app = {
 		}
 	},
 	
-	synchronousCreateInstance: function(templateUUID){
-		var app = this
-		var newObject = Object.create(app.objectProto)
-		newObject.attributes = {};
-		
-		if (!app.templateCache.hasOwnProperty(templateUUID)){ 
-			console.log('need to call asyncCreateInstance')
-		}
-		//if version numbers do not match ask the user if they want to run a merge operation
-		var templateObject = app.templateCache[templateUUID]
-		
-		if (templateObject.hasOwnProperty('primitive')){
-			console.log(templateObject)
-			var primitiveString = templateObject.primitive.save()
-			newObject.initPrimitive(primitiveString.name, primitiveString.value)
-		}
-		newObject.addObjectToVisualization()
-		var instanceOfProperty = app.createObject(app.templateCache['bbl3gf7bk9jvb3zqqr43zvpm'])
-		newObject.addAttribute(instanceOfProperty, 'bbl3gf7bk9jvb3zqqr43zvpm')
-		console.log(newObject)
-		Object.keys(templateObject.attributes).forEach(function(attributeKey){//this needs fixing
-			var attributeObject = app.synchronousCreateInstance(attributeKey)
-			newObject.addAttribute(attributeObject, templateUUID)//possible loop created here
-			templateObject.attributes[attributeKey].values.forEach(function(attributeValue){
-				console.log('synchronous')
-				newObject.extendAttribute(attributeKey,attributeValue)
-			})
-		})
-		newObject.uuid = app.generateUUID()
-		return newObject
-	},
-	
-	synchronousCreateObject: function(template){//loads the objects in the template if it can be guaranteed that all objects in dependent objects are loaded
-		var app = this
-		var newObject = Object.create(app.objectProto)
-		newObject.attributes = {}
-		newObject.attributePrimitiveBuffer = {};
-		var referenceTable = {};
-		var parentTypeObject = undefined;
-		//check type of object. if its type exists in typeTable then reference it else create it
-		if (template.hasOwnProperty('uuid')){
-			newObject.uuid = template.uuid;
-		} else {
-			newObject.uuid = app.generateUUID();
-		}
-		
-		if (template.hasOwnProperty('primitive')){
-			newObject.initPrimitive(template.primitive.name, template.primitive.value)
-		}
-		//newObject.debugVisualizer = new app.debugVisualizer()
-		newObject.addObjectToVisualization()
-		//check name of object in current language (En only for now) and then add it to a name table
-		
-		var parseValuesList = function(valuesList){
-			var values = []
-			valuesList.forEach(function(subTemplate){
-				if (subTemplate.hasOwnProperty('@ref')){
-					values.push(referenceTable[subTemplate['@ref']])
-				} 
-				else if (subTemplate.hasOwnProperty('globalRef')){
-					values.push(app.fileObject.attributes[subTemplate.globalRef].values[index])
-				} else{
-					var value = app.synchronousCreateObject(subTemplate)
-					values.push(value)
-					referenceTable[subTemplate['@id']] = value
-				}
-			})
-			return values
-		}
-		if (parentTypeObject !== undefined){ //if object has a parentType
-			Object.keys(parentTypeObject.attributes).forEach(function(parentTypeAttributeKey){
-			
-				template.attributes.forEach(function(attributeTemplate){
-					if (parentTypeAttributeKey === attributeTemplate.type){
-						console.log('replace type attribute:', parentTypeAttributeKey, 'with a specific instance')
-						newObject.newAddAttribute(attributeTemplate.type, parseValuesList(attributeTemplate.values))
-						return
-					}
-				})
-				newObject.newAddAttribute(parentTypeAttributeKey,parentTypeObject.attributes[parentTypeAttributeKey].values)
-				
-			})
-		} else {
-			template.attributes.forEach(function(attributeTemplate){
-			//eventuallty use add attribute function here right now it just adds the values template to the attributes list
-				
-				newObject.newAddAttribute(attributeTemplate.type, parseValuesList(attributeTemplate.values)) 
-			})
-		}
-		
-		return newObject
-	},
-	
-	serializeObject: function(object){
-		var referenceTable = []
-		var requiredTemplates = []
-		var serializeLevel = function(object){//serialize single level of an object so that reference table is abstracted
-			var obj = {}
-			var attr = []
-			if (object.hasOwnProperty('uuid')){
-				obj.uuid = object.uuid
-			}
-			if (object.hasOwnProperty('primitive')){
-				obj.primitive = object.primitive.save()
-			}
-			
-			
-			var referenceId = referenceTable.indexOf(object)
-			if (referenceId === -1){
-				obj['@id'] = referenceTable.length
-				referenceTable.push(object)
-			} else {
-				return {'@ref':referenceId}
-			}
-			
-			
-			Object.keys(object.attributes).forEach(function(key){
-				var values = []
-				object.attributes[key].values.forEach(function(value){	
-					values.push(serializeLevel(value))
-				})
-				attr.push({type:key, values:values})
-				if (key === "P0"&& requiredTemplates.indexOf(object.attributes[key].values[0].primitive.element) === -1){// //to avoid duplicates
-					requiredTemplates.push(object.attributes[key].values[0].primitive.element)
-				}
-			})
-			
-			obj.attributes = attr;
-			//obj.uuid = object.uuid
-			return obj
-		}
-		var serializedObject =  serializeLevel(object, []);
-		serializedObject.includedObjects = requiredTemplates;
-		return JSON.stringify(serializedObject,undefined,2)
-	},
-	
 	loadJson:function(uuid,cb){
-		console.log('loading', uuid)
 		var app = this;
 		if (app.jsonCache.hasOwnProperty(uuid)) {
 			cb(app.templateCache[uuid])
@@ -718,7 +587,6 @@ window.app = {
 			$.getJSON('/object/'+uuid, function(template) {
 				app.jsonCache[uuid] = template;
 				var remainingAJAXRequests = template.dependentObjects.length
-				console.log('dependentObjects',template.dependentObjects)
 				if (remainingAJAXRequests === 0){
 					cb();
 				} else {
@@ -739,6 +607,7 @@ window.app = {
 	},
 	
 	loadObject:function(uuid,cb){
+		console.log('loadObject')
 		app.loadJson(uuid,function(){
 			var object = app.createObject(uuid)
 			app.templateCache[uuid] = object;
@@ -746,8 +615,8 @@ window.app = {
 		})
 	},
 	
-	createObject:function(uuid){//load object only is called when loading 
-		//a template or loading objects from a file, not instantiating new objects
+	createObject:function(uuid){
+		console.log('createObject')
 		var app = this
 		if (app.jsonCache.hasOwnProperty(uuid)){
 			var template = app.jsonCache[uuid];
@@ -799,7 +668,7 @@ window.app = {
 
 			
 			if (template.primitive.name !== null){
-				console.log('initializing primitive',template.primitive.name, template.primitive.value )
+				//console.log('initializing primitive',template.primitive.name, template.primitive.value )
 				newObject.initPrimitive(template.primitive.name, template.primitive.value)
 			} else {
 				newObject.initPrimitive('none', null)
@@ -817,6 +686,7 @@ window.app = {
 	},
 	
 	serializeElement : function(element){//new verson of serialize object --replace when done
+		console.log('serializeElement')
 		var obj = {};
 
 		var dependentObjects = []; //only direct descendants
@@ -840,10 +710,12 @@ window.app = {
 			addDepencency(attribute.attribute)
 			var values = [];
 			attribute.values.forEach(function(value){
+				console.log('file objects: ', app.fileObjects)
 				if (app.userObjects.getKey(value) !== undefined){
 					values.push({refType:'user', ref:app.userObjects.getKey(value)})
 				} else if (app.fileObjects.getKey(value) !== undefined){
-					values.push({refType:'file', ref:app.userObjects.getKey(value)})
+					console.log('fileObjectDetected')
+					values.push({refType:'file', ref:app.fileObjects.getKey(value)})
 				} else {
 					values.push(value.uuid)
 					addDepencency(value)
@@ -860,6 +732,7 @@ window.app = {
 	},
 		
 	saveObject: function(object, cb){
+		console.log('saveObject')
 		var objectsToSave = [];
 		var dependentObjects = [];	
 		var serializeElement = app.serializeElement

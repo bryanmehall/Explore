@@ -33,7 +33,7 @@ def introPage():
 @app.route('/objects')
 def objectsPage():
 	if request_wants_json():
-		return json.dumps(query_db('select * from objects'))
+		return json.dumps(query_db("select * from objects WHERE nameEn not like''"))
 	else:
 		#eventually turn into files and templates
 		return render_template('objects.html')
@@ -157,7 +157,7 @@ def query_db(query, args=(), one=False):
  
 def init_db(databaseName, schemaName):
     with app.app_context():
-        db = get_db(DATABASE)
+        db = get_db()
         with app.open_resource(schemaName, mode='r') as f:
             db.cursor().executescript(f.read())
         db.commit()
