@@ -177,11 +177,12 @@ def readJsonFile(id):#old
 
 def readObjectJson(uuid):
 	data = query_db('select * from objects where uuid = ?',[uuid], one=True)
+	print "read++++++++++++", uuid, data
 	return Response(data[3],  mimetype='application/json')
 	
 def modifyJson(uuid, data):
-	print '##################'+uuid+data
-	get_db().execute("UPDATE objects SET json=? WHERE uuid=?",[data,uuid])
+	print "##################", uuid, data
+	print get_db().execute("UPDATE objects SET json=? WHERE uuid=?",[data,uuid])
 	get_db().commit()
 	return
 
@@ -193,8 +194,9 @@ def newTemplate(user, json_data, nameEn):
 	return uuid
 
 def newObject(data):
-	uuid = randId()
+	
 	nameEn = data[u'nameEn']
+	uuid = data[u'uuid'] or randId()
 	
 	if data[u'json'] == None:
 		jsonData = {'primitive':{'name':'none',"value":None},"uuid":uuid,"dependentObjects":[],"attributes":[]}

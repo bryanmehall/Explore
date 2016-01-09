@@ -5,6 +5,9 @@
 	<script src="http://cdnjs.cloudflare.com/ajax/libs/d3/2.10.0/d3.v2.min.js"></script>
 	
 	<script src="/static/app.js"></script>
+	<script src="/static/object.js"></script>
+	<script src="/static/vis.js"></script>
+	<script src="/static/primitives.js"></script>
 	<script src="/static/editorInit.js"></script>
 	
 	<style>
@@ -15,21 +18,18 @@
 			background: #dfdfdf;
 			cursor: pointer;
 		}
-
+		
+		.unselectable {
+			-webkit-touch-callout: none;
+			-webkit-user-select: none;
+			-khtml-user-select: none;
+			-moz-user-select: none;
+			-ms-user-select: none;
+			user-select: none;
+		}
 		.link {
-		  stroke: #000;
 		  stroke-width: 1.5px;
 		}
-
-		.node {
-		  fill: #000;
-		  stroke: #fff;
-		  stroke-width: 1.5px;
-		}
-
-		.node.a { fill: #48b4ff; }
-		.node.b { fill: #ff7f0e; }
-		.node.c { fill: #03ff03; }
 
 
 	</style>
@@ -57,13 +57,14 @@
    		</div>
    		<div id="accordianContainer" class="column-left">
    			<h2>accordian tree</h2>
+			<div id="objectDiv"></div>
+			<div id="graphDiv"></div>
    		</div>
    		<div class="column-right">
    			<h2>JSON</h2>
    			<pre id="jsonText"></pre>
 		</div>
 	</div>
-	<div id="objectDiv"></div>
 	
 	<script src="//d3js.org/d3.v3.min.js"></script>
 </body>

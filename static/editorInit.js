@@ -23,6 +23,7 @@ window.onload = function(){
 
 	
 	var commitTemplate = function(){
+		
 		app.saveObject(app.currentObject, function(){})
 		var json = document.getElementById('jsonText').innerText//app.serializeElement(app.currentObject)
 	};
@@ -71,6 +72,7 @@ window.onload = function(){
 	
 	var importTemplateToFile = function(){//for now assume that always loading templates
 		app.tempTable.currentUUID = path.split('/').slice(-1)[0]
+		console.log('loading++++++++++', app.tempTable.currentUUID)
 		var initializationObjects = [
 			app.tempTable.fileUUID,
 			app.tempTable.currentUUID,
