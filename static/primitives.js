@@ -7,7 +7,27 @@ window.app.primitives = {
 		},
 		parseString(input){}
 	},
-	
+	attribute:{
+		init:function(parentObject){
+			this.parentObject = parentObject
+			this.element = {
+				cardinality:null,//type: integer
+				extensive:null,//type: bool
+				types:[], //any type
+				instanceOf:null, //any type
+				default:null, //any type
+				reflexiveAttribute:null, //type: Property
+				//should all of these be here?
+				reflexive:null, // type:bool
+				symmetric:null, //type: bool
+				transitive: null
+			}
+		},
+		save:function(){
+			return {name:'file', value:null}
+		},
+		parseString(input){}
+	},
 	file:{
 		init:function(parentObject){
 		},
@@ -197,7 +217,9 @@ window.app.primitives = {
 			var primitive = this
 			primitive.parentObject = parentObject
 			primitive.element = document.createElement('span')
-
+			primitive.element.addEventListener('click', function(){
+				app.vis.displayObject(parentObject)
+			})//get rid of this once events are handled within the language
 			var parentConceptAttributeUUID = app.tempTable.parentConcept
 			var parentConceptLinkFunction = function(parentNumber, index){
 

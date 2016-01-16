@@ -72,7 +72,7 @@ window.onload = function(){
 	
 	var importTemplateToFile = function(){//for now assume that always loading templates
 		app.tempTable.currentUUID = path.split('/').slice(-1)[0]
-		console.log('loading++++++++++', app.tempTable.currentUUID)
+		
 		var initializationObjects = [
 			app.tempTable.fileUUID,
 			app.tempTable.currentUUID,
@@ -81,8 +81,8 @@ window.onload = function(){
 			
 		
 		initializationObjects.forEach(function(uuid){
+			
 			app.loadObject(uuid, function(object){
-				document.getElementById('accordianContainer').appendChild(object.accordianContainer)
 				
 				if (uuid === app.tempTable.fileUUID){
 					app.fileObject = object

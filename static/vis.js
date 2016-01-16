@@ -1,6 +1,16 @@
 window.app.vis = {
 	nodes: [],
 	links: [],
+	displayObject:function(object){
+		var objectContainer = object.accordianContainer;
+		var objectDiv = document.getElementById('objectDiv')
+		while (objectDiv.hasChildNodes()) { //make it update instead of replacing
+			objectDiv.removeChild(objectDiv.lastChild);
+		}
+		var objRep = app.serializeElement(object)
+		document.getElementById('jsonText').innerHTML = JSON.stringify(objRep, null, 2)
+		objectDiv.appendChild(objectContainer)
+	},
 	init: function() {
 		var width = 400,
 			height = 400;
@@ -23,7 +33,7 @@ window.app.vis = {
 			.attr({
 				'id': 'arrowhead',
 				'viewBox': '-0 -5 10 10',
-				'refX': 5,
+				'refX': 15,
 				'refY': 0,
 				'orient': 'auto',
 				'markerWidth': 5,
@@ -67,13 +77,8 @@ window.app.vis = {
 				.attr("class", 'unselectable')
 				.call(force.drag)
 				.on("click", function(d) {
-					var objectContainer = d.object.accordianContainer;
-					while (objectDiv.hasChildNodes()) { //make it update instead of replacing
-						objectDiv.removeChild(objectDiv.lastChild);
-					}
-					var objRep = app.serializeElement(d.object)
-					document.getElementById('jsonText').innerHTML = JSON.stringify(objRep, null, 2)
-					objectDiv.appendChild(objectContainer)
+					app.vis.displayObject(d.object)
+					
 				}).append("text")
 				.attr("dx", 0)
 				.attr("dy", ".35em")
@@ -89,7 +94,12 @@ window.app.vis = {
 					return d.color
 				})
 
-			node.exit().remove();
+			node.exit()
+				.append('circle')
+				.attr('r', 10)
+				//.select('text')
+				//.attr('fill', 'red')
+			//remove();
 			
 
 			force.start();

@@ -2,13 +2,14 @@
 window.app = {
 
 	tempTable:{
-		fileUUID:'m85xp0dfrth1t1sbn9wrv77q',
+		fileUUID:'dl7t76bq3k76yv7mms83dc4f',
 		childElements:'jhkr9c44a68qs54rk3addmv8',
 		parentElement:'5grmpy33zd3tkljbhs2j04ar',
 		instanceOf:'z77dxvw1fpa4xxcy49r0klmg',
 		selectedObjects:'cw3s6fl6s3p9rvqyh90d108x',
 		parentConcept:'mkccvvqh38apgddwn08zx11v',
-		nameEn:'dfzz0y7g6x55pq6rag5pyw43'
+		nameEn:'dfzz0y7g6x55pq6rag5pyw43',
+		textRepresentation:'lsbqsxcsbty6zwp35d51vx02'
 	},
 	
 	init: function(){
@@ -82,7 +83,7 @@ window.app = {
 		return []
 	},
 	
-	newObjectSelector:function(typeRestrictions, eventLocation, cb) {
+	newObjectSelector: function(typeRestrictions, eventLocation, cb) {
 		//open object search functionality
 		var typeRestrictions 	= typeRestrictions || [];
 		var box 				= document.createElement('div');
@@ -184,28 +185,6 @@ window.app = {
 		textArea.focus()
 	},
 	
-	select: function(selectedObject) {//should this be a method of the object?
-		app.currentObject = selectedObject
-		if(!window.event.shiftKey) {
-			var objRep = app.serializeElement(selectedObject)
-			document.getElementById('jsonText').innerHTML = JSON.stringify(objRep,null,2)
-			console.log(app.fileObject)
-			app.fileObject.attributes[app.tempTable.selectedObjects].values.forEach(function(object){
-			app.deSelect(object)
-			})
-		}
-		selectedObject.accordianContainer.style.backgroundColor = '#ffaaaa'
-		//app.fileObject.extendAttribute(app.tempTable.selectedObjects, selectedObject)
-		//selectedObject.attributes[app.tempTeble.selectedObjects].values[0].primitive.set(true)
-		
-	},
-	
-	deSelect: function(selectedObject) {
-		selectedObject.accordianContainer.style.backgroundColor = 'white'
-		//selectedObject.attributes.Pselected.values[0].primitive.set(false)
-		//this.fileObject.removeAttributeValue(app.tempTable.selectedObjects,selectedObject)
-	},
-	
 	mergeAttributes: function(object1, object2) {
 		Object.keys(object1.attributes).forEach(function(attributeType){
 			var matchIndex = Object.keys(object2.attributes).indexOf(attributeType)
@@ -229,20 +208,22 @@ window.app = {
 				}
 			});
 	},
-	
+	count:0,
 	createInstance: function(parentUUID,cb) {
 		var app = this;
 		
-		
+		var map = {}; //mapping between template and instance objects for terminating loops
 		var create = function(templateUUID){
+			
 			//initialize object
 			var newObject = Object.create(app.objectProto);
 			newObject.uuid = app.generateUUID()
 			newObject.attributes = {};
+			newObject.dependents = [];
 			newObject.attributePrimitiveBuffer = {};
-			
+			map[templateUUID] = newObject;
 			//retrieve template
-			var templateObject = app.templateCache[templateUUID]
+			var templateObject = app.objectCache[templateUUID]
 			
 			//initialize primitive if needed
 			if (templateObject.hasOwnProperty('primitive')){
@@ -255,26 +236,39 @@ window.app = {
 			
 			//initialize attributes with special cases
 			//add instance property
-			var instanceOfProperty = app.createObject(app.tempTable.instanceOf)
-			newObject.addAttribute(instanceOfProperty)
-			newObject.extendAttribute(app.tempTable.instanceOf, templateObject)
+			
 			
 			//initialize remaining attributes
-			Object.keys(templateObject.attributes).forEach(function(attributeKey){//this needs fixing
+			Object.keys(templateObject.attributes).forEach(function(attributeKey){
+				
 				var attributeObject = app.createObject(attributeKey)//change to createInstance
-				newObject.addAttribute(attributeObject, templateUUID) //possible loop created here
-				templateObject.attributes[attributeKey].values.forEach(function(attributeValue){
-					var newValue = create(attributeValue.uuid)
+				newObject.addAttribute(attributeObject) //possible loop created here
+
+				templateObject.attributes[attributeKey].values.forEach(function(attributeValue,index){
+					var targetUUID = templateObject.attributes[attributeKey].values[index].uuid
+					if (map.hasOwnProperty(targetUUID)){//need to make work for multiple values
+						var newValue = map[targetUUID]
+					} else if (attributeKey === app.tempTable.instanceOf){
+						var newValue = templateObject
+						
+					} else {
+						var newValue = create(attributeValue.uuid)
+						map[targetUUID] = newValue
+						
+					}
+					
 					newObject.extendAttribute(attributeKey,newValue)
 				})
+				
+				
 			})
-			
+			app.objectCache[newObject.uuid]=newObject
 			return newObject
 		};
 		
 		
 		if (!app.templateCache.hasOwnProperty(parentUUID)){
-			console.log('templateCache does not have property')
+			//console.log('templateCache does not have property')
 			app.loadObject(parentUUID, function(parentObject){
 				var newObject = create(parentUUID);
 				app.newObject(newObject.uuid,'',app.serializeElement(newObject),function(response){
@@ -282,33 +276,48 @@ window.app = {
 				})
 			})
 		} else {
-			var newObject = create(parentUUID);
+			var newObject = create(parentUUID); //parent 
+			console.log(newObject)
 			cb(newObject);
 		}
 	},
-	
 	loadJson:function(uuid,cb){
+		//this.count++
+		//if (this.count>100){cb()}
+		
 		var app = this;
 		if (app.jsonCache.hasOwnProperty(uuid)) {
 			cb(app.templateCache[uuid])
 		} else {
 			$.getJSON('/object/'+uuid, function(template) {
 				app.jsonCache[uuid] = template;
+				
 				var remainingAJAXRequests = template.dependentObjects.length
 				if (remainingAJAXRequests === 0){
 					cb();
 				} else {
+					
 					template.dependentObjects.forEach(function(UUID) {
-					app.loadObject(UUID, function(innerTemplate) {
+						if (app.jsonCache.hasOwnProperty(UUID)){
+							
 							remainingAJAXRequests -=1;
 							if (remainingAJAXRequests === 0) {
 								cb();
 							}
-						})
+						} else {
+							app.loadJson(UUID, function(innerTemplate) {
+								
+								remainingAJAXRequests -=1;
+								if (remainingAJAXRequests === 0) {
+									cb();
+								}
+							})
+						}
 					})
 				}
 			})
 			.fail(function(a, b, c) {
+				throw 'UUID not found in database'
 				console.log('failed to load valid JSON file check that file is valid and there', uuid, a, b, c)
 			})
 		}
@@ -324,16 +333,16 @@ window.app = {
 	},
 	
 	createObject:function(uuid){
-		//console.log('createObject')
 		var app = this
+		
 		if (app.jsonCache.hasOwnProperty(uuid)){
 			var template = app.jsonCache[uuid];
 		} else {
+			
 			console.log('need to load json for ' + uuid + ' before calling createObject')
-			return 'eventually return undefined'
+			throw 'JSON not in cache'
+			//return 'eventually return undefined'
 		}
-		
-		
 		
 		var parseAttrTemplate = function(attrTemplate){
 			//attrTemplate is in the form {type:attrObjectUUID, values:[ValueUUID or reference]}
@@ -345,7 +354,9 @@ window.app = {
 			
 			var parseValueTemplate = function(valueTemplate){
 				var value;
+				
 				if (typeof(valueTemplate)==='string'){
+					
 					value = app.createObject(valueTemplate)
 					
 				} else {
@@ -359,7 +370,7 @@ window.app = {
 
 				newObject.extendAttribute(attributeParentUUID, value)
 			};
-			
+			//console.log(attrValuesUUIDs, attrTemplate)
 			attrValuesUUIDs.forEach(function(valueTemplate){
 				parseValueTemplate(valueTemplate)
 				
@@ -367,17 +378,20 @@ window.app = {
 		};
 
 		if (app.objectCache.hasOwnProperty(uuid)){//if object with this uuid already exists then return reference to it
-			console.log('already has uuid: ',uuid)
+			
 			return app.objectCache[uuid]
 		} else {
+			
 			var newObject = Object.create(app.objectProto)
 			newObject.uuid = template.uuid;
+			newObject.dependents = [];
+			newObject.dependents = [];
 			newObject.attributes = {};
 			newObject.attributePrimitiveBuffer = {};
-
+			app.objectCache[template.uuid] = newObject
 			
 			if (template.primitive.name !== null){
-				//console.log('initializing primitive',template.primitive.name, template.primitive.value )
+				////console.log('initializing primitive',template.primitive.name, template.primitive.value )
 				newObject.initPrimitive(template.primitive.name, template.primitive.value)
 			} else {
 				newObject.initPrimitive('none', null)
@@ -388,14 +402,14 @@ window.app = {
 			template.attributes.forEach(function(attrTemplate){
 				parseAttrTemplate(attrTemplate);
 			});
-			app.objectCache[uuid]=newObject
+			
+			
+			
 			return newObject
 		}
-		
 	},
 	
-	serializeElement : function(element){//new verson of serialize object --replace when done
-		console.log('serializeElement')
+	serializeElement : function(element){
 		var obj = {};
 
 		var dependentObjects = []; //only direct descendants
@@ -403,7 +417,7 @@ window.app = {
 		//save primitive
 		
 		obj.primitive = element.primitive.save()
-		console.log(element.uuid, obj.primitive)
+		//console.log(element.uuid, obj.primitive)
 		var addDepencency = function(includedObject){
 			//add uuid to dependent Objects if it is not already there
 			if (dependentObjects.indexOf(includedObject.uuid)===-1){
@@ -419,7 +433,7 @@ window.app = {
 			addDepencency(attribute.attribute)
 			var values = [];
 			attribute.values.forEach(function(value){
-				console.log('file objects: ', app.fileObjects)
+				//console.log('file objects: ', app.fileObjects)
 				if (app.userObjects.getKey(value) !== undefined){
 					values.push({refType:'user', ref:app.userObjects.getKey(value)})
 				} else if (app.fileObjects.getKey(value) !== undefined){
@@ -441,7 +455,7 @@ window.app = {
 	},
 		
 	saveObject: function(object, cb){
-		console.log('saveObject', object)
+		//console.log('saveObject', object)
 		var objectsToSave = [];
 		var dependentObjects = [];	
 		var serializeElement = app.serializeElement

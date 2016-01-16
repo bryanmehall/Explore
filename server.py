@@ -177,12 +177,18 @@ def readJsonFile(id):#old
 
 def readObjectJson(uuid):
 	data = query_db('select * from objects where uuid = ?',[uuid], one=True)
-	print "read++++++++++++", uuid, data
-	return Response(data[3],  mimetype='application/json')
+	if data == None:
+		print 'error when loading ', uuid
+		return Response('error')
+	else:
+		return Response(data[3],  mimetype='application/json')
 	
 def modifyJson(uuid, data):
-	print "##################", uuid, data
-	print get_db().execute("UPDATE objects SET json=? WHERE uuid=?",[data,uuid])
+	dbEntry = query_db('select * from objects where uuid = ?',[uuid], one=True)
+	if dbEntry == None:
+		get_db().execute('insert into objects (uuid, json, nameEn) values (?, ?, ?)',[uuid, data, 'unnamed'])
+	else:
+		get_db().execute("UPDATE objects SET json=? WHERE uuid=?",[data,uuid])
 	get_db().commit()
 	return
 
