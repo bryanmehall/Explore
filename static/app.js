@@ -9,9 +9,14 @@ window.app = {
 		selectedObjects:'cw3s6fl6s3p9rvqyh90d108x',
 		parentConcept:'mkccvvqh38apgddwn08zx11v',
 		nameEn:'dfzz0y7g6x55pq6rag5pyw43',
-		textRepresentation:'lsbqsxcsbty6zwp35d51vx02'
+		textRepresentation:'lsbqsxcsbty6zwp35d51vx02',
+		width:'4tkkhvs7xs157gvmvhzvzj30',
+		height:' h9rfmjwtwlawx6fqycrpbylj',
+		firstNode: 'p1xlx8akxcakhg41tvr7zjcn',
+		nextNode:'fcvv6mrkcj8htzhgf7lm17kv'
 	},
 	
+
 	init: function(){
 		var objectTable = {
 			getKey: function(value){
@@ -232,7 +237,8 @@ window.app = {
 			}
 			
 			//add visualization before attributes are initialized
-			newObject.addObjectToVisualization()
+			newObject.addObjectToVisualization()//eventually replace
+			newObject.createObjectVisualization()
 			
 			//initialize attributes with special cases
 			//add instance property
@@ -317,7 +323,7 @@ window.app = {
 				}
 			})
 			.fail(function(a, b, c) {
-				throw 'UUID not found in database'
+				throw 'UUID ' +uuid+' not found in database'
 				console.log('failed to load valid JSON file check that file is valid and there', uuid, a, b, c)
 			})
 		}
@@ -340,7 +346,7 @@ window.app = {
 		} else {
 			
 			console.log('need to load json for ' + uuid + ' before calling createObject')
-			throw 'JSON not in cache'
+			throw 'JSON not in cache' + uuid
 			//return 'eventually return undefined'
 		}
 		
@@ -398,7 +404,8 @@ window.app = {
 			}
 
 			newObject.addObjectToVisualization()
-
+			newObject.createObjectVisualization()
+			
 			template.attributes.forEach(function(attrTemplate){
 				parseAttrTemplate(attrTemplate);
 			});

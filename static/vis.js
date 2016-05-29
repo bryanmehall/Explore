@@ -1,16 +1,49 @@
 window.app.vis = {
 	nodes: [],
+	
 	links: [],
+	/**
+	 * handles visualization of object when set to active
+	 * @param {object} object [[Description]]
+	 */
 	displayObject:function(object){
-		var objectContainer = object.accordianContainer;
+		if (app.displayedObject !== undefined){
+			d3.select(app.displayedObject.node).style("font-weight", 'normal')
+		}
+		app.displayedObject = object
+		d3.select(object.node).style("font-weight", 'bold')
+		//var objectContainer = object.vis.tree.node() //accordianContainer;
+		var objectContainer = object.accordianContainer
 		var objectDiv = document.getElementById('objectDiv')
 		while (objectDiv.hasChildNodes()) { //make it update instead of replacing
 			objectDiv.removeChild(objectDiv.lastChild);
 		}
 		var objRep = app.serializeElement(object)
 		document.getElementById('jsonText').innerHTML = JSON.stringify(objRep, null, 2)
+		
 		objectDiv.appendChild(objectContainer)
+		//objectDiv.appendChild(objectContainer)
 	},
+	
+	getDisplayText:function(obj){
+		if (obj.attributes.hasOwnProperty(app.tempTable.nameEn)){
+			var label = obj.attributes[app.tempTable.nameEn].values[0].primitive.element.innerText
+		} else {
+			var label = obj.uuid.substring(0,4)
+		}
+		return label
+	},
+	
+	getNodeById:function(id){
+		var nodes = app.vis.nodes;
+			for (var i=0; i<nodes.length; i++){
+				if (nodes[i].id === id){
+					return nodes[i]
+				}
+			}
+			console.log('didnt find any', id)
+	},
+	
 	init: function() {
 		var width = 400,
 			height = 400;
@@ -47,10 +80,6 @@ window.app.vis = {
 
 		var node = app.vis.svg.selectAll(".node"),
 			link = app.vis.svg.selectAll(".link");
-
-
-		
-		
 		
 		app.vis.start = function() {
 			link = link.data(force.links(), function(d) {
@@ -78,7 +107,7 @@ window.app.vis = {
 				.call(force.drag)
 				.on("click", function(d) {
 					app.vis.displayObject(d.object)
-					
+					app.displayedObject.node = this
 				}).append("text")
 				.attr("dx", 0)
 				.attr("dy", ".35em")

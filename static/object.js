@@ -1,7 +1,13 @@
 window.app.objectProto = {//contains shared methods of all objects
 	//primitive methods
+	vis:{},
+	/**
+	 * Links the current object with a primitive assiciated with a specific attribute with Link function
+	 * @param {UUID} attributeTypeUUID uuid of attribute to link with
+	 * @param {function} linkFunction      function to execute upon linking
+	 */
 	subscribe: function (attributeTypeUUID, linkFunction){
-
+		console.log('subscribing', this.uuid,'to', attributeTypeUUID)
 		var targetObject = this.attributes[attributeTypeUUID];
 
 		var bufferObject = {
@@ -20,9 +26,13 @@ window.app.objectProto = {//contains shared methods of all objects
 				console.log('add functionality here')
 			})
 		}
-
 	},
 	
+	/**
+	 * Initializes primitive for object
+	 * @param {string} primitiveName  string name of primitive
+	 * @param {[[Type]]} primitiveValue value for parseString function to parse
+	 */
 	initPrimitive: function(primitiveName, primitiveValue){
 
 		var primitive = Object.create(app.primitives[primitiveName])
@@ -41,6 +51,7 @@ window.app.objectProto = {//contains shared methods of all objects
 	 * @returns {jsArray} [[Description]]
 	 */
 	getAttributeByUUID: function(typeUUID, index){
+		
 		if (this.hasOwnProperty('primitive') && this.primitive.type === 'property'){//handle getting attributes of attributes
 			
 		}
@@ -49,6 +60,10 @@ window.app.objectProto = {//contains shared methods of all objects
 		//add support for transitive relations
 		return this.attributes[typeUUID].values
 	},
+	hasAttribute: function(type){
+		return this.attributes.hasOwnProperty(type)
+	},
+	
 	
 	/**
 	 * Adds attribute given by attributeObject to the parent object
@@ -59,22 +74,14 @@ window.app.objectProto = {//contains shared methods of all objects
 		var parentObject = this;
 		var attributeUUID = attributeObject.uuid
 		if (this.attributes.hasOwnProperty(attributeUUID)){
-			console.log(this.attributes,attributeUUID)
-			
+			console.log('already has attribute',this.attributes,attributeUUID)
 		} else {
 			//parentTypeUUID || attributeObject.getAttributeByUUID('uuid for instance of property')
 			//this.attributePrimitiveBuffer[attributeUUID] = []
-			parentObject.attributes[attributeUUID] = {attribute:attributeObject, values:[]}
+			parentObject.attributes[attributeUUID] = {attribute:attributeObject, conditionals:{}, instanceOf:{}, values:[]}
 			this.addAttributeToObjectVisualization(attributeObject, [])
 		}
 	},
-	
-	
-
-	
-	
-	
-		
 	
 	
 	/**
@@ -95,7 +102,7 @@ window.app.objectProto = {//contains shared methods of all objects
 			var bufferList  = this.attributePrimitiveBuffer[attributeType];
 
 			bufferList.forEach(function(buffer){
-
+				console.log('buffer',buffer)
 				buffer.linkFunction(value, valuesList.length)//-1 to make 0 indexed
 				value.primitive.dependentPrimitives.push(buffer.parentObject.primitive)
 			})
@@ -108,7 +115,9 @@ window.app.objectProto = {//contains shared methods of all objects
 		//check for default values
 		//check if order matters
 		//remove from dependents
+		this.removeValueFromVisualization(attributeType,value)
 		var index = this.attributes[attributeType].values.indexOf(value)
+		console.log('index', index)
 		this.attributes[attributeType].values.splice(index,1)
 		//update primitives
 	},
@@ -127,19 +136,87 @@ window.app.objectProto = {//contains shared methods of all objects
 	},
 	
 	replaceWith: function (newObject){
+		var updated = [];
+		
 		console.log('dependents', this.dependents)
 		var dependents = this.dependents
 		var oldObject = this;
-			
+		//be careful of modifying state and then expecting something else
+		Object.keys(newObject.attributes).forEach(function(type){
+			if (oldObject.hasAttribute(type)){
+				//loop through attribute values
+				oldObject.attributes[type].values.forEach(function(oldValue,index){
+					//check for loop condition
+					if (updated.indexOf(oldValue)===-1){
+						var newValue = newObject.attributes[type].values[index]
+						updated.push(newValue)
+						oldValue.replaceWith(newValue)
+					}
+				})
+			} 
+		})
+		
 		dependents.forEach(function(reference){
 			console.log(reference.attribute, oldObject, newObject)
 			reference.value.removeAttributeValue(reference.attribute, oldObject)
 			reference.value.extendAttribute(reference.attribute, newObject)
 		})
+		
+		
 	},
 	
 	//object visualization methods
-	addObjectToVisualization: function (){
+	createObjectVisualization(){
+		var obj = this;
+		
+		//create tree
+		this.vis.tree = d3.select(document.createElement('div'))
+			.style('marginTop', '10px')
+		var tree = this.vis.tree
+		
+		//add label
+		tree.idLabel = tree.append('span')
+			.text(this.uuid)
+		
+		//add replace button
+		tree.replaceButton = tree.append('button')
+			.text('replace')
+			.on('click', function(){app.newObjectSelector(null, null, function(newObject,typeUUID){
+				obj.replaceWith(newObject)
+			})})
+		
+		//add primitive information
+		tree.primitiveDiv = tree.append('div')
+		var primitiveDiv = tree.primitiveDiv
+		primitiveDiv.selector = primitiveDiv.append('select')
+			.attr('value', this.primitive.save().name)
+			.on('change', function(){
+				obj.initPrimitive(this.value, primitiveDiv.text.node().innerText)
+			})
+		
+		Object.keys(app.primitives).forEach(function(name){
+			primitiveDiv.selector.append('option')
+				.text(name)
+				.attr('value',name)
+		})
+		
+		
+		var primitiveValue = this.primitive.save().value;
+		primitiveDiv.text = primitiveDiv.append('input')
+			.text('primitiveValue')
+			.attr('contentEditable', true)
+			.on('keyup',function(){
+			console.log(this.value)
+				obj.primitive.parseString(this.value)
+			})
+		
+			
+		tree.attributeDiv = tree.append('div')
+		tree.addAttributeButton = tree.append('button')
+			
+	
+	},
+	addObjectToVisualization: function (){//old version of createObjectVisualization
 		var obj = this
 		var objectVisualization = document.createElement('div')
 		d3.select(objectVisualization)
@@ -188,7 +265,7 @@ window.app.objectProto = {//contains shared methods of all objects
 			obj.primitive.parseString(primitiveValueDiv.innerText)
 		})
 		selector.addEventListener('change', function(event){
-			obj.initPrimitive(selector.value,primitiveValueDiv.innerText)
+			obj.initPrimitive(selector.value, primitiveValueDiv.innerText)
 		});
 		var primitiveName = this.primitive.save().name;
 		selector.value = primitiveName;
@@ -220,17 +297,8 @@ window.app.objectProto = {//contains shared methods of all objects
 
 		//add node to graph
 
-		if (obj.attributes.hasOwnProperty(app.tempTable.nameEn)){
-			var label = 'name'
-			var label = obj.attributes[app.tempTable.nameEn].values[0].primitive.element.innerText
-			console.log(label)
-			if (label === ''){label = 'blank'}
-			
-		} else {
-			
-			var label = 'obj'
-		}
-		console.log('label', label)
+		var label = app.vis.getDisplayText(obj)
+		
 		app.vis.nodes.push({id:obj.uuid, object:obj, label:label})
 		app.vis.start()
 		return this.accordianContainer
@@ -244,7 +312,10 @@ window.app.objectProto = {//contains shared methods of all objects
 		//if(attributeObject.attributes.hasOwnProperty(app.tempTable.nameEn)){
 		//	attributeBlock.innerText = attributeObject.attributes[app.tempTable.nameEn].values[0].primitive.element;
 		//} else {
-		attributeBlock.innerText = attributeType;
+		attributeBlock.innerText = app.vis.getDisplayText(attributeObject);
+		attributeBlock.addEventListener('click',function(){
+			app.vis.displayObject(attributeObject)
+		})
 		//}
 
 
@@ -282,6 +353,20 @@ window.app.objectProto = {//contains shared methods of all objects
 		var attributeBlock = this.accordianContainer.querySelector('.UUID'+attributeType)
 		this.accordianContainer.querySelector('.attributeList').removeChild(attributeBlock)
 	},
+	removeValueFromVisualization(attributeType, value){
+		//find link with correct source, target and attribute id
+		var currentId = this.uuid
+		var link = app.vis.links.filter(function(linkData){
+			console.log('linkData', linkData)
+			return linkData.source.id === currentId && linkData.target.id === value.uuid && linkData.attrId === attributeType
+		})[0]
+		var index = app.vis.links.indexOf(link)
+		if (index > -1) {
+			app.vis.links.splice(index, 1);
+		}
+		app.vis.start()
+		
+	},
 	
 	addValueToAttribute: function (attributeType, value){
 		//console.log('adding value to attribute')
@@ -289,7 +374,11 @@ window.app.objectProto = {//contains shared methods of all objects
 		var obj = this;
 		var valueListDiv = this.accordianContainer.querySelector('.UUID'+attributeType)
 		var valueDiv = document.createElement('div')
-		valueDiv.innerText = value.uuid;
+		var label = app.vis.getDisplayText(value)
+		valueDiv.innerText = label;
+		valueDiv.addEventListener('click',function(){
+			app.vis.displayObject(value)
+		})
 		valueListDiv.appendChild(valueDiv)
 		var getById = function(id){
 			var nodes = app.vis.nodes;
@@ -309,7 +398,7 @@ window.app.objectProto = {//contains shared methods of all objects
 				//app.vis.links.push({source: source, target: target, color:'#ccc'});
 				break;
 			case app.tempTable.textRepresentation:
-				app.vis.links.push({source: source, target: target, color:'#ffa5a5'});
+				app.vis.links.push({source: source, target: target, attrId:attributeType, color:'#ffa5a5'});
 				break;
 			case app.tempTable.nameEn:
 				target.color = '#9fd397'
@@ -319,7 +408,7 @@ window.app.objectProto = {//contains shared methods of all objects
 				break;
 			default:
 				target.color = '#000'
-				app.vis.links.push({source: source, target: target, color:'black'});
+				app.vis.links.push({source: source, target: target, attrId:attributeType, color:'black'});
 		}
 
 		app.vis.start()

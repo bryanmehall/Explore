@@ -1,4 +1,36 @@
 window.app.primitives = {
+	
+	dataFlowHandler:function(node){
+		//perform topological sort on nodes
+		//add run counter for eventual optimization
+		var sorted = [];
+		var visited = [];
+		visitNode(node)
+		
+		console.log('visited',visited,sorted)
+		function visitNode(n){
+			var subscribers = n.dependentPrimitives
+			if (visited.indexOf(n) !== -1){
+				//if node has been visited then graph has circular dependency
+				console.log('circular graph')
+        		return
+			}
+			
+			//if (n is a state modifier){
+				//modify graph
+			visited.push(n)
+			if (subscribers.length === 0){
+				sorted.push(n)
+				delete visited[visited.indexOf(n)]
+				console.log('reached leaf node')
+			} else {
+				subscribers.forEach(function(subscriber){
+					visitNode(subscriber)
+					
+				})
+			}
+		}
+	},
 	none:{
 		init:function(parentObject){
 		},
@@ -7,6 +39,7 @@ window.app.primitives = {
 		},
 		parseString(input){}
 	},
+	
 	attribute:{
 		init:function(parentObject){
 			this.parentObject = parentObject
@@ -28,6 +61,7 @@ window.app.primitives = {
 		},
 		parseString(input){}
 	},
+	
 	file:{
 		init:function(parentObject){
 		},
@@ -51,6 +85,32 @@ window.app.primitives = {
 		},
 		save:function(){
 			return {name:'window', value:null}
+		},
+		parseString(input){}
+	},
+	
+	
+	svgWindow:{
+		init:function(parentObject){
+			var primitive = this
+			this.parentObject = parentObject;
+			this.element = document.createElementNS('http://www.w3.org/2000/svg','svg');
+			this.element.style.width = '300px'
+			this.element.style.height = '300px'
+			this.element.style.backgroundColor = '#aadeff'
+			var appContainer = document.getElementById('appContainer')
+			appContainer.appendChild(this.element);
+			
+			var childElementAttributeUUID = app.tempTable.childElements
+			var childElementLinkFunction = function(childElement, index){
+				var SVGElement = childElement.primitive.element
+				console.log('svg element', childElement)
+				primitive.element.appendChild(SVGElement)
+			}
+			parentObject.subscribe(childElementAttributeUUID, childElementLinkFunction)
+		},
+		save:function(){
+			return {name:'svgWindow', value:null}
 		},
 		parseString(input){}
 	},
@@ -95,7 +155,7 @@ window.app.primitives = {
 			}
 
 			this.parentObject.attributes[app.tempTable.childElements].values.forEach(function(value){
-				var element = value.primitive.element
+				var element = value.primitive.element;
 				var subSpan;
 				if (typeof element==='string'){
 					subSpan = document.createElement('span')
@@ -108,6 +168,9 @@ window.app.primitives = {
 			})
 		}
 	},
+	
+	
+	
 	
 	boolean:{
 		init:function(parentObject){
@@ -142,6 +205,10 @@ window.app.primitives = {
 		}
 
 	},
+	
+	
+	
+	
 	string:{
 		init:function(parentObject){
 			this.parentObject = parentObject;
@@ -167,6 +234,10 @@ window.app.primitives = {
 			})
 		}
 	},
+	
+	
+	
+	
 	IEEEFloatingPoint:{
 
 		init:function(parentObject){
@@ -182,7 +253,10 @@ window.app.primitives = {
 		set:function(value){
 
 			//console.log('string primitive set to ',value,'dependent',this.dependentPrimitives)
+			console.log('number update to',value)
+			
 			this.element = value;
+			app.primitives.dataFlowHandler(this)
 			this.update();
 		},
 		update:function(){
@@ -191,6 +265,10 @@ window.app.primitives = {
 			})
 		}
 	},	
+	
+	
+	
+	
 	additionOperator:{
 
 		init:function(){},
@@ -206,20 +284,78 @@ window.app.primitives = {
 			//console.log('string primitive set to ',value,'dependent',this.dependentPrimitives)
 		},
 		update:function(){
-
+			
 			this.dependentPrimitives.forEach(function(primitive){
 				primitive.update()
 			})
 		}
 	},
+	
+	
+	rectangle:{
+		//expects to be in an object with width attribute, height attribute
+		init:function(parentObject){
+			this.parentObject = parentObject;
+			this.element = document.createElementNS('http://www.w3.org/2000/svg','rect')
+			var rect = this.element
+			rect.setAttribute('height', 10)
+			rect.setAttribute('width', 10)
+			
+			var widthAttributeUUID = app.tempTable.width
+			var widthLinkFunction = function(widthObject, index){
+				rect.setAttribute('width', widthObject.primitive.element)
+			}
+			parentObject.subscribe(widthAttributeUUID,widthLinkFunction)
+			
+			var heightAttributeUUID = app.tempTable.height
+			var heightLinkFunction = function(heightObject, index){
+				rect.setAttribute('height', heightObject.primitive.element)
+				
+			}
+			parentObject.subscribe(heightAttributeUUID,heightLinkFunction)
+			
+		},
+		parseString:function(input){
+			return true
+		},
+		save:function(){
+			return {name:'rectangle', value:null}
+		},
+		set:function(value){
+
+			//console.log('string primitive set to ',value,'dependent',this.dependentPrimitives)
+		},
+		update:function(){
+			console.log('updating rectangle')
+			var rect = this.element
+			var height = this.parentObject.attributes[app.tempTable.height].values[0].primitive.element
+			rect.setAttribute('height', height)
+			var width = this.parentObject.attributes[app.tempTable.width].values[0].primitive.element
+			rect.setAttribute('width',width)
+			this.dependentPrimitives.forEach(function(primitive){
+				primitive.update()
+			})
+		}
+	},
+	
 	numberTextRepresentation:{
+		//expects to be in object with parent concept attribute with js number as primitive element
 		init:function(parentObject){
 			var primitive = this
 			primitive.parentObject = parentObject
 			primitive.element = document.createElement('span')
+			primitive.element.contentEditable = true
+			primitive.element.className = 'mathText'
+			primitive.element.addEventListener('input', function(){
+				var text = primitive.element.textContent
+				var number = parseInt(text)
+				primitive.parentObject.attributes[app.tempTable.parentConcept].values[0].primitive.set(number)
+				
+			})
 			primitive.element.addEventListener('click', function(){
 				app.vis.displayObject(parentObject)
 			})//get rid of this once events are handled within the language
+			
 			var parentConceptAttributeUUID = app.tempTable.parentConcept
 			var parentConceptLinkFunction = function(parentNumber, index){
 
@@ -236,9 +372,11 @@ window.app.primitives = {
 			parentObject.subscribe(parentElementAttributeUUID, parentElementLinkFunction)
 
 		},
+		
 		save:function(){
 			return {name:'numberTextRepresentation', value:null}
 		},
+		
 		parseString(input){
 			var number = parseInt(input)
 			if (! isNaN(number)){
@@ -250,14 +388,17 @@ window.app.primitives = {
 			}
 		},
 		update:function(){
-
+			
 			var number = this.parentObject.attributes[app.tempTable.parentConcept].values[0].primitive.element
 			var stringRep = number.toString();
-			this.element.innerText = stringRep;
+			if (stringRep !== this.element.innertext){
+				this.element.innerText = stringRep;
 
-			this.dependentPrimitives.forEach(function(primitive){
-				primitive.update()
-			})
+				this.dependentPrimitives.forEach(function(primitive){
+					primitive.update()
+				})
+			}
+			
 		}
 	}
 }
