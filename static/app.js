@@ -2,18 +2,19 @@
 window.app = {
 
 	tempTable:{
-		fileUUID:'dl7t76bq3k76yv7mms83dc4f',
+		fileUUID:'11k9jsa37t5s7wp658xxwlwk',
+		attribute:'0cg8sh7a04pftqp8g8q0d4nr',
+		instanceOf:'rhb27vta0jzyqf7vkqjvpx4h',
 		childElements:'jhkr9c44a68qs54rk3addmv8',
 		parentElement:'5grmpy33zd3tkljbhs2j04ar',
-		instanceOf:'z77dxvw1fpa4xxcy49r0klmg',
 		selectedObjects:'cw3s6fl6s3p9rvqyh90d108x',
 		parentConcept:'mkccvvqh38apgddwn08zx11v',
 		nameEn:'dfzz0y7g6x55pq6rag5pyw43',
 		textRepresentation:'lsbqsxcsbty6zwp35d51vx02',
 		width:'4tkkhvs7xs157gvmvhzvzj30',
 		height:' h9rfmjwtwlawx6fqycrpbylj',
-		firstNode: 'p1xlx8akxcakhg41tvr7zjcn',
-		nextNode:'fcvv6mrkcj8htzhgf7lm17kv'
+		firstElement: 'p1xlx8akxcakhg41tvr7zjcn',
+		nextElement:'fcvv6mrkcj8htzhgf7lm17kv'
 	},
 	
 
@@ -201,11 +202,14 @@ window.app = {
 		$.ajax({
 				type: 'POST',
 				url: '/object/new',
-				data: JSON.stringify({uuid:uuid, nameEn:nameEn, json:json}),
+				data: JSON.stringify({uuid:uuid, nameEn:nameEn, json:null}),
 				success: function(response) {
 					var data = JSON.parse(response);
 					//data is in the form: {uuid:'fjiwje...',json:json}
-					callback(data);
+					app.loadObject(data.uuid, function(){
+						callback(data);
+					})
+					
 				},
 				error: function(err) {
 					console.log('error posting to server...');
@@ -213,8 +217,27 @@ window.app = {
 				}
 			});
 	},
-	count:0,
-	createInstance: function(parentUUID,cb) {
+	/**
+	 * creates attribute of attribute
+	 * @param   {object}   templateObject [[Description]]
+	 * @param   {[[Type]]} newObject      [[Description]]
+	 * @returns {[[Type]]} [[Description]]
+	 */
+	createAttribute(templateObject, newObject){//move to within createInstance?
+		console.log('creating attribute of Attribute')
+		
+		Object.keys(templateObject.attributes).forEach(function(attributeName){
+			var attributeDescriptor = templateObject.attributes[attributeName]
+			if(attributeDescriptor.values.length !== 1){
+				throw 'attribute of '+ templateObject.uuid + 'has a cardinality greater than one'
+			} else {
+				//newObject.attributes[attributeName] = createInstance(attributeDescriptor.values[0].uuid)
+			}
+		})
+		return newObject
+	},
+	
+	createInstance: function(parentUUID,cb) {//should this just be parentObject instead of uuid?
 		var app = this;
 		
 		var map = {}; //mapping between template and instance objects for terminating loops
@@ -234,6 +257,10 @@ window.app = {
 			if (templateObject.hasOwnProperty('primitive')){
 				var primitiveString = templateObject.primitive.save()
 				newObject.initPrimitive(primitiveString.name, primitiveString.value)
+				if(templateObject.isAnAttribute()){
+					console.log('at', newObject.primitive)
+					return app.createAttribute(templateObject,newObject)
+				}
 			}
 			
 			//add visualization before attributes are initialized
@@ -241,13 +268,13 @@ window.app = {
 			newObject.createObjectVisualization()
 			
 			//initialize attributes with special cases
-			//add instance property
+			
 			
 			
 			//initialize remaining attributes
 			Object.keys(templateObject.attributes).forEach(function(attributeKey){
 				
-				var attributeObject = app.createObject(attributeKey)//change to createInstance
+				var attributeObject = app.createInstance(attributeKey)//change to createInstance
 				newObject.addAttribute(attributeObject) //possible loop created here
 
 				templateObject.attributes[attributeKey].values.forEach(function(attributeValue,index){
@@ -287,10 +314,8 @@ window.app = {
 			cb(newObject);
 		}
 	},
-	loadJson:function(uuid,cb){
-		//this.count++
-		//if (this.count>100){cb()}
-		
+	
+	loadJson:function(uuid,cb){	
 		var app = this;
 		if (app.jsonCache.hasOwnProperty(uuid)) {
 			cb(app.templateCache[uuid])
@@ -323,14 +348,20 @@ window.app = {
 				}
 			})
 			.fail(function(a, b, c) {
-				throw 'UUID ' +uuid+' not found in database'
+				throw 'UUID "' +uuid+'" not found in database'
 				console.log('failed to load valid JSON file check that file is valid and there', uuid, a, b, c)
 			})
 		}
 	},
 	
+	/**
+	 * Loads object with uuid from database, creates it and places it in the templateCache
+	 * @param {[[Type]]} uuid [[Description]]
+	 * @param {[[Type]]} cb   [[Description]]
+	 */
 	loadObject:function(uuid,cb){
 		//console.log('loadObject')
+		console.log(uuid)
 		app.loadJson(uuid,function(){
 			var object = app.createObject(uuid)
 			app.templateCache[uuid] = object;
@@ -338,20 +369,27 @@ window.app = {
 		})
 	},
 	
+	/**
+	 * Creates object where JSON data is already loaded into JSONCache
+	 * @param   {[[Type]]} uuid uuid of object to be created
+	 * @returns {[[Type]]} [[Description]]
+	 */
 	createObject:function(uuid){
 		var app = this
 		
 		if (app.jsonCache.hasOwnProperty(uuid)){
 			var template = app.jsonCache[uuid];
 		} else {
-			
 			console.log('need to load json for ' + uuid + ' before calling createObject')
 			throw 'JSON not in cache' + uuid
 			//return 'eventually return undefined'
 		}
 		
 		var parseAttrTemplate = function(attrTemplate){
-			//attrTemplate is in the form {type:attrObjectUUID, values:[ValueUUID or reference]}
+			/*attrTemplate is in the form {
+				type:attrObjectUUID, //uuid of attribute object
+				values:[ValueUUID or reference]
+			}*/
 			var attrObjectUUID = attrTemplate.type;
 			var attributeObject = app.createObject(attrObjectUUID);
 			newObject.addAttribute(attributeObject);
@@ -391,7 +429,6 @@ window.app = {
 			var newObject = Object.create(app.objectProto)
 			newObject.uuid = template.uuid;
 			newObject.dependents = [];
-			newObject.dependents = [];
 			newObject.attributes = {};
 			newObject.attributePrimitiveBuffer = {};
 			app.objectCache[template.uuid] = newObject
@@ -409,9 +446,6 @@ window.app = {
 			template.attributes.forEach(function(attrTemplate){
 				parseAttrTemplate(attrTemplate);
 			});
-			
-			
-			
 			return newObject
 		}
 	},
@@ -435,7 +469,6 @@ window.app = {
 		//save attributes
 		Object.keys(element.attributes).forEach(function(key){
 			var attribute = element.attributes[key];
-
 			var typeUUID = attribute.attribute.uuid
 			addDepencency(attribute.attribute)
 			var values = [];

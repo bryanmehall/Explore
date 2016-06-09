@@ -34,7 +34,7 @@ window.app.objectProto = {//contains shared methods of all objects
 	 * @param {[[Type]]} primitiveValue value for parseString function to parse
 	 */
 	initPrimitive: function(primitiveName, primitiveValue){
-
+		console.log('initializing',this.uuid,primitiveName)
 		var primitive = Object.create(app.primitives[primitiveName])
 		primitive.dependentPrimitives = [];
 		this.primitive = primitive;
@@ -52,7 +52,7 @@ window.app.objectProto = {//contains shared methods of all objects
 	 */
 	getAttributeByUUID: function(typeUUID, index){
 		
-		if (this.hasOwnProperty('primitive') && this.primitive.type === 'property'){//handle getting attributes of attributes
+		if (this.hasOwnProperty('primitive') && this.primitive.type === ''){//handle getting attributes of attributes
 			
 		}
 		var attributeDescriptor = this.attributes[typeUUID];
@@ -60,13 +60,16 @@ window.app.objectProto = {//contains shared methods of all objects
 		//add support for transitive relations
 		return this.attributes[typeUUID].values
 	},
+	
 	hasAttribute: function(type){
 		return this.attributes.hasOwnProperty(type)
 	},
 	
-	
+	isAnAttribute(){
+		return this.hasOwnProperty('primitive') && this.primitive.type === "attribute"
+	},
 	/**
-	 * Adds attribute given by attributeObject to the parent object
+	 * Adds instance of attribute given by attributeObject to the parent object
 	 * @param {Object} attributeObject 
 	 */
 	addAttribute: function(attributeObject) {
@@ -75,10 +78,12 @@ window.app.objectProto = {//contains shared methods of all objects
 		var attributeUUID = attributeObject.uuid
 		if (this.attributes.hasOwnProperty(attributeUUID)){
 			console.log('already has attribute',this.attributes,attributeUUID)
+		} else if (this.isAnAttribute()){
+			this.attributes[attributeUUID] = {attribute:attributeUUID, values:[]};
 		} else {
-			//parentTypeUUID || attributeObject.getAttributeByUUID('uuid for instance of property')
-			//this.attributePrimitiveBuffer[attributeUUID] = []
-			parentObject.attributes[attributeUUID] = {attribute:attributeObject, conditionals:{}, instanceOf:{}, values:[]}
+			var newAttributeObject = app.createInstance(attributeObject)
+			var attributeDescriptor = {attribute:newAttributeObject, values:[]}
+			parentObject.attributes[attributeUUID] = attributeDescriptor;
 			this.addAttributeToObjectVisualization(attributeObject, [])
 		}
 	},
@@ -90,13 +95,13 @@ window.app.objectProto = {//contains shared methods of all objects
 	 * @param {object}   value         [[Description]]
 	 */
 	extendAttribute: function (attributeType,value){
-		
+
 		var parentObject = this;
 		var valuesList = this.attributes[attributeType].values
 
 		valuesList.push(value)
-		this.addValueToAttribute(attributeType, value)//look at maybe delete?
-		
+		this.addValueToAttribute(attributeType, value)//adds to visualization--should be a different name
+
 		value.dependents.push({attribute:attributeType, value:this})
 		if(this.attributePrimitiveBuffer.hasOwnProperty(attributeType)){
 			var bufferList  = this.attributePrimitiveBuffer[attributeType];
@@ -107,6 +112,7 @@ window.app.objectProto = {//contains shared methods of all objects
 				value.primitive.dependentPrimitives.push(buffer.parentObject.primitive)
 			})
 		}
+		
 	},
 	
 	removeAttributeValue: function (attributeType,value){//remove instance of 'value' from values of 'attributetype'
@@ -123,7 +129,10 @@ window.app.objectProto = {//contains shared methods of all objects
 	},
 	
 	
-	
+	/**
+	 * Remove attribute from object and 
+	 * @param {[[Type]]} attributeType [[Description]]
+	 */
 	removeAttribute: function (attributeType){
 		//remove primitive connections
 		delete this.attributes[attributeType]
@@ -131,10 +140,10 @@ window.app.objectProto = {//contains shared methods of all objects
 		this.removeAttributeFromVisualization(attributeType)
 	},
 	
-	setAttributeToValue: function (attributeType, index, value){
-
-	},
-	
+	/**
+	 * Replaces object with another --more rigerous definition still needed
+	 * @param {object} newObject [[Description]]
+	 */
 	replaceWith: function (newObject){
 		var updated = [];
 		

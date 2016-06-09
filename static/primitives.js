@@ -43,13 +43,14 @@ window.app.primitives = {
 	attribute:{
 		init:function(parentObject){
 			this.parentObject = parentObject
+			this.type = 'attribute'
 			this.element = {
 				cardinality:null,//type: integer
 				extensive:null,//type: bool
 				types:[], //any type
 				instanceOf:null, //any type
 				default:null, //any type
-				reflexiveAttribute:null, //type: Property
+				symmetricAttribute:null, //type: Property
 				//should all of these be here?
 				reflexive:null, // type:bool
 				symmetric:null, //type: bool
@@ -57,7 +58,7 @@ window.app.primitives = {
 			}
 		},
 		save:function(){
-			return {name:'file', value:null}
+			return {name:'attribute', value:null}
 		},
 		parseString(input){}
 	},
@@ -206,7 +207,59 @@ window.app.primitives = {
 
 	},
 	
-	
+	text:{//replaces span
+		init:function(parentObject){
+			var primitive = this
+			primitive.parentObject = parentObject
+			primitive.element = document.createElement('span')
+
+			var firstElementUUID = app.tempTable.firstElement
+			var firstElementLinkFunction = function(firstElement, index){
+				
+				var element = firstElement.primitive.element
+				var subSpan;
+				if (typeof element==='string'){
+					subSpan = document.createElement('span')
+					subSpan.innerText = element;
+				} else {
+					subSpan = element;
+				}
+				primitive.element.appendChild(subSpan)
+			}
+			parentObject.subscribe(firstElementUUID, firstElementLinkFunction)
+
+			var parentElementAttributeUUID = app.tempTable.parentElement
+			var parentElementLinkFunction = function(parentElement, index){
+				parentElement.primitive.element.appendChild(primitive.element)
+			}
+			parentObject.subscribe(parentElementAttributeUUID, parentElementLinkFunction)
+		},
+		
+		save:function(){
+			return {name:'span', value:null}
+		},
+		parseString(input){},
+		update:function(){
+
+			var node = this.element
+			while (node.hasChildNodes()) {//make it update instead of replacing
+				node.removeChild(node.lastChild);
+			}
+
+			this.parentObject.attributes[app.tempTable.firstElement].values.forEach(function(value){
+				var element = value.primitive.element;
+				var subSpan;
+				if (typeof element==='string'){
+					subSpan = document.createElement('span')
+					subSpan.innerText = element;
+				} else {
+					subSpan = element;
+				}
+
+				node.appendChild(subSpan)
+			})
+		}
+	},
 	
 	
 	string:{

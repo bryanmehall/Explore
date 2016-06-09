@@ -28,6 +28,10 @@ window.onload = function(){
 		var json = document.getElementById('jsonText').innerText//app.serializeElement(app.currentObject)
 	};
 	
+	function saveSelected(){
+		app.saveObject(app.displayedObject,function(){})
+	}
+	
 	var addTemplateHandler = function(){
 		var templateNameInput = document.createElement('input')
 		templateNameInput.placeholder = 'new template name';
@@ -39,7 +43,7 @@ window.onload = function(){
 				var nameEn = templateNameInput.value
 				var json = document.getElementById('jsonText').innerText
 				
-				app.newTemplate(user, json, nameEn, function(){})
+				app.newObject(user, json, nameEn, function(){})
 				saveteplateDiv.removeChild(templateNameInput)
 			}
 		})
@@ -52,7 +56,7 @@ window.onload = function(){
 				app.newObjectSelector(null,null,function(){})
 			}
 			if (key === "_"){
-				selectPropertyMenu()
+				//selectPropertyMenu()
 			}
 	};
 	
@@ -61,6 +65,9 @@ window.onload = function(){
 	
 	var commitTemplateButton = document.getElementById('commitTemplate')
 	commitTemplateButton.addEventListener('click', commitTemplate)
+	
+	var saveSelectedButton = document.getElementById('saveSelected')
+	saveSelectedButton.addEventListener('click', saveSelected)
 	
 	var newTemplateButton = document.getElementById('newTemplate')
 	newTemplateButton.addEventListener('click', addTemplateHandler)
@@ -72,30 +79,13 @@ window.onload = function(){
 	
 	var importTemplateToFile = function(){//for now assume that always loading templates
 		app.tempTable.currentUUID = path.split('/').slice(-1)[0]
-		
-		var initializationObjects = [
-			app.tempTable.fileUUID,
-			app.tempTable.currentUUID,
-			app.tempTable.instanceOf
-		];	
-			
-		
-		initializationObjects.forEach(function(uuid){
-			
-			app.loadObject(uuid, function(object){
-				
-				if (uuid === app.tempTable.fileUUID){
-					app.fileObject = object
-					
-					//initialize app.fileObjects
-				} 
-				if(uuid === app.tempTable.currentUUID){
-					//document.getElementById('jsonText').innerText = app.jsonCache[uuid]
-					app.currentObject = object
-					
-				}
+		app.loadObject(app.tempTable.fileUUID, function(masterFileObject){
+			app.createInstance(masterFileObject.uuid, function(fileObject){
+				//load file into dom here9
 			})
 		})
+		
+		
 	}
 	importTemplateToFile()
 	

@@ -54,11 +54,10 @@
 		newObjectButton.addEventListener('click',function(){
 			var nameEn = document.getElementById('newName').value
 			
-			
 			$.ajax({
 				type: 'POST',
 				url: '/object/new',
-				data: JSON.stringify({nameEn:nameEn, json:null}),
+				data: JSON.stringify({uuid:null, nameEn:nameEn, json:null}),
 				success: function(response) {
 					var data = JSON.parse(response);
 					var uuid = data.uuid;
@@ -81,13 +80,13 @@
 </head>
 <body>
 	
-	<h1>Objects</h2>
+	<h1>Files</h1>
 	<div class="column-left">
 		<div  id="objectsList">
 				
 		</div>
 		<button id="newObjectButton">addObject</button>
-		<input id = "newName"></input>
+		<input id = "newName">
 	</div>
 
 	
