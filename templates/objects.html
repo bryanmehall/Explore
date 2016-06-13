@@ -5,6 +5,7 @@
 	window.onload = function(){
 		var newObjectButton = document.getElementById('newObjectButton');
 		var objectsList = document.getElementById('objectsList');
+		
 		$.ajax({
 			type: 'GET',
 			dataType: 'json',
@@ -25,7 +26,7 @@
 			var objectEntry = document.createElement('div')
 
 			var link = document.createElement('a')
-			link.textContent = nameEn;
+			link.textContent = uuid;
 			link.href = '/object/'+uuid;
 
 			var deleteButton = document.createElement('button');
@@ -50,7 +51,7 @@
 			objectEntry.appendChild(deleteButton)
 			objectsList.appendChild(objectEntry)
 		};
-
+		
 		newObjectButton.addEventListener('click',function(){
 			var nameEn = document.getElementById('newName').value
 			
@@ -81,6 +82,7 @@
 <body>
 	
 	<h1>Files</h1>
+	
 	<div class="column-left">
 		<div  id="objectsList">
 				
