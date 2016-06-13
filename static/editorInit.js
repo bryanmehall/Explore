@@ -32,7 +32,7 @@ window.onload = function(){
 		app.saveObject(app.displayedObject,function(){})
 	}
 	
-	var addTemplateHandler = function(){
+	/*var addTemplateHandler = function(){//remove this soon
 		var templateNameInput = document.createElement('input')
 		templateNameInput.placeholder = 'new template name';
 		var saveteplateDiv = document.getElementById('saveTemplateDiv')
@@ -47,7 +47,7 @@ window.onload = function(){
 				saveteplateDiv.removeChild(templateNameInput)
 			}
 		})
-	};
+	};*/
 	
 	var addObjectEventHandler = function(event){
 		var key = String.fromCharCode(event.keyCode);
@@ -69,8 +69,11 @@ window.onload = function(){
 	var saveSelectedButton = document.getElementById('saveSelected')
 	saveSelectedButton.addEventListener('click', saveSelected)
 	
-	var newTemplateButton = document.getElementById('newTemplate')
-	newTemplateButton.addEventListener('click', addTemplateHandler)
+	//var newTemplateButton = document.getElementById('newTemplate')
+	//newTemplateButton.addEventListener('click', addTemplateHandler)
+	
+	var reloadDatabaseButton = document.getElementById('reloadDatabase');
+	reloadDatabaseButton.addEventListener('click', app.initDatabase)
 	
 
 	
@@ -79,12 +82,13 @@ window.onload = function(){
 	
 	var importTemplateToFile = function(){//for now assume that always loading templates
 		app.tempTable.currentUUID = path.split('/').slice(-1)[0]
-		app.loadObject(app.tempTable.fileUUID, function(masterFileObject){
-			app.createInstance(masterFileObject.uuid, function(fileObject){
-				//load file into dom here9
+		app.initDatabase(function(){
+			app.loadObject(app.tempTable.fileUUID, function(masterFileObject){
+				app.createInstance(masterFileObject.uuid, function(fileObject){
+					//load file into dom here
+				})
 			})
 		})
-		
 		
 	}
 	importTemplateToFile()

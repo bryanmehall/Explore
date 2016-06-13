@@ -2,9 +2,9 @@
 window.app = {
 
 	tempTable:{
-		fileUUID:'11k9jsa37t5s7wp658xxwlwk',
-		attribute:'0cg8sh7a04pftqp8g8q0d4nr',
-		instanceOf:'rhb27vta0jzyqf7vkqjvpx4h',
+		fileUUID:'fileId',
+		attribute:'attributeId',
+		instanceOf:'instanceOfId',
 		childElements:'jhkr9c44a68qs54rk3addmv8',
 		parentElement:'5grmpy33zd3tkljbhs2j04ar',
 		selectedObjects:'cw3s6fl6s3p9rvqyh90d108x',
@@ -17,7 +17,37 @@ window.app = {
 		nextElement:'fcvv6mrkcj8htzhgf7lm17kv'
 	},
 	
-
+	initDatabase: function(cb){
+		//to use, delete all entries in database and then crete new enter 
+		//init file object
+		createFileObject()
+		function createFileObject(){
+			app.newObject(app.tempTable.fileUUID,function(fileObject){
+				fileObject.initPrimitive('file',null)
+				createAttributeObject()
+			})
+		}
+		function createAttributeObject(){
+			app.newObject(app.tempTable.attribute,function(attributeObject){
+				attributeObject.initPrimitive('attribute',null)
+				createInstanceOfObject(attributeObject)
+			})
+			
+		}
+		function createInstanceOfObject(attributeObject){
+			app.createInstance(app.tempTable.attribute, function(instanceOfObject){
+				instanceOfObject.initPrimitive('attribute',null)
+					.addAttribute(instanceOfObject)
+					.extendAttribute(instanceOfObject,attributeObject)
+				
+				cb()
+				//createInstanceOfObject()
+			})
+			
+		}
+		
+	},
+	
 	init: function(){
 		var objectTable = {
 			getKey: function(value){
@@ -49,7 +79,6 @@ window.app = {
 		app.userObjects = Object.create(objectTable) //{useridentifier: object}
 		app.selectedObjects = Object.create(objectTable)
 		app.vis.init()
-		app.generateUUID()
 	},
 
 	
@@ -197,17 +226,17 @@ window.app = {
 		})
 	},
 	
-	newObject: function(uuid, nameEn, json, callback){//make this create instance of object
+	newObject: function(uuid, callback){//make this create instance of object
 		//creates new object
 		$.ajax({
 				type: 'POST',
 				url: '/object/new',
-				data: JSON.stringify({uuid:uuid, nameEn:nameEn, json:null}),
+				data: JSON.stringify({uuid:uuid, nameEn:'abc', json:null}),
 				success: function(response) {
 					var data = JSON.parse(response);
 					//data is in the form: {uuid:'fjiwje...',json:json}
-					app.loadObject(data.uuid, function(){
-						callback(data);
+					app.loadObject(data.uuid, function(object){
+						callback(object);
 					})
 					
 				},
@@ -231,13 +260,17 @@ window.app = {
 			if(attributeDescriptor.values.length !== 1){
 				throw 'attribute of '+ templateObject.uuid + 'has a cardinality greater than one'
 			} else {
-				//newObject.attributes[attributeName] = createInstance(attributeDescriptor.values[0].uuid)
+				templateObject.addAttribute()
 			}
 		})
+		newObject.addObjectToVisualization()//eventually replace
+		newObject.createObjectVisualization()
+		console.log('new', newObject)
 		return newObject
 	},
 	
 	createInstance: function(parentUUID,cb) {//should this just be parentObject instead of uuid?
+		console.log('creating instance', parentUUID)
 		var app = this;
 		
 		var map = {}; //mapping between template and instance objects for terminating loops
@@ -315,44 +348,6 @@ window.app = {
 		}
 	},
 	
-	loadJson:function(uuid,cb){	
-		var app = this;
-		if (app.jsonCache.hasOwnProperty(uuid)) {
-			cb(app.templateCache[uuid])
-		} else {
-			$.getJSON('/object/'+uuid, function(template) {
-				app.jsonCache[uuid] = template;
-				
-				var remainingAJAXRequests = template.dependentObjects.length
-				if (remainingAJAXRequests === 0){
-					cb();
-				} else {
-					
-					template.dependentObjects.forEach(function(UUID) {
-						if (app.jsonCache.hasOwnProperty(UUID)){
-							
-							remainingAJAXRequests -=1;
-							if (remainingAJAXRequests === 0) {
-								cb();
-							}
-						} else {
-							app.loadJson(UUID, function(innerTemplate) {
-								
-								remainingAJAXRequests -=1;
-								if (remainingAJAXRequests === 0) {
-									cb();
-								}
-							})
-						}
-					})
-				}
-			})
-			.fail(function(a, b, c) {
-				throw 'UUID "' +uuid+'" not found in database'
-				console.log('failed to load valid JSON file check that file is valid and there', uuid, a, b, c)
-			})
-		}
-	},
 	
 	/**
 	 * Loads object with uuid from database, creates it and places it in the templateCache
@@ -360,13 +355,50 @@ window.app = {
 	 * @param {[[Type]]} cb   [[Description]]
 	 */
 	loadObject:function(uuid,cb){
-		//console.log('loadObject')
-		console.log(uuid)
-		app.loadJson(uuid,function(){
+		var loadJson = function(uuid,cb){	
+			if (app.jsonCache.hasOwnProperty(uuid)) {
+				cb(app.templateCache[uuid])
+			} else {
+				$.getJSON('/object/'+uuid, function(template) {
+					app.jsonCache[uuid] = template;
+
+					var remainingAJAXRequests = template.dependentObjects.length
+					if (remainingAJAXRequests === 0){
+						cb();
+					} else {
+
+						template.dependentObjects.forEach(function(UUID) {
+							if (app.jsonCache.hasOwnProperty(UUID)){
+
+								remainingAJAXRequests -=1;
+								if (remainingAJAXRequests === 0) {
+									cb();
+								}
+							} else {
+								loadJson(UUID, function(innerTemplate) {
+
+									remainingAJAXRequests -=1;
+									if (remainingAJAXRequests === 0) {
+										cb();
+									}
+								})
+							}
+						})
+					}
+				})
+				.fail(function(a, b, c) {
+					throw 'UUID "' +uuid+'" not found in database'
+					console.log('failed to load valid JSON file check that file is valid and there', uuid, a, b, c)
+				})
+			}
+		}
+		console.log('load object',uuid)
+		loadJson(uuid,function(){
 			var object = app.createObject(uuid)
 			app.templateCache[uuid] = object;
 			cb(object);
 		})
+		
 	},
 	
 	/**
@@ -376,7 +408,6 @@ window.app = {
 	 */
 	createObject:function(uuid){
 		var app = this
-		
 		if (app.jsonCache.hasOwnProperty(uuid)){
 			var template = app.jsonCache[uuid];
 		} else {

@@ -1,6 +1,10 @@
 window.app.objectProto = {//contains shared methods of all objects
 	//primitive methods
 	vis:{},
+	
+	setId: function(newId){
+		this.uuid = newId
+	},
 	/**
 	 * Links the current object with a primitive assiciated with a specific attribute with Link function
 	 * @param {UUID} attributeTypeUUID uuid of attribute to link with
@@ -40,6 +44,7 @@ window.app.objectProto = {//contains shared methods of all objects
 		this.primitive = primitive;
 		primitive.init(this)
 		primitive.parseString(primitiveValue)
+		return this
 	},
 	 
 	//attributeMethods
@@ -79,6 +84,7 @@ window.app.objectProto = {//contains shared methods of all objects
 		if (this.attributes.hasOwnProperty(attributeUUID)){
 			console.log('already has attribute',this.attributes,attributeUUID)
 		} else if (this.isAnAttribute()){
+			console.log('attribute id', attributeUUID)
 			this.attributes[attributeUUID] = {attribute:attributeUUID, values:[]};
 		} else {
 			var newAttributeObject = app.createInstance(attributeObject)
@@ -86,6 +92,7 @@ window.app.objectProto = {//contains shared methods of all objects
 			parentObject.attributes[attributeUUID] = attributeDescriptor;
 			this.addAttributeToObjectVisualization(attributeObject, [])
 		}
+		return this
 	},
 	
 	
@@ -94,17 +101,19 @@ window.app.objectProto = {//contains shared methods of all objects
 	 * @param {UUID} attributeType [[Description]]
 	 * @param {object}   value         [[Description]]
 	 */
-	extendAttribute: function (attributeType,value){
-
+	extendAttribute: function (attributeObject,value){
+		console.log('extending attribute', attributeObject)
+		var attributeId = attributeObject.uuid
 		var parentObject = this;
-		var valuesList = this.attributes[attributeType].values
-
+		console.log('a',this.attributes)
+		var valuesList = this.attributes[attributeId].values
+		
 		valuesList.push(value)
-		this.addValueToAttribute(attributeType, value)//adds to visualization--should be a different name
+		this.addValueToAttribute(attributeId, value)//adds to visualization--should be a different name
 
-		value.dependents.push({attribute:attributeType, value:this})
-		if(this.attributePrimitiveBuffer.hasOwnProperty(attributeType)){
-			var bufferList  = this.attributePrimitiveBuffer[attributeType];
+		value.dependents.push({attribute:attributeId, value:this})
+		if(this.attributePrimitiveBuffer.hasOwnProperty(attributeId)){
+			var bufferList  = this.attributePrimitiveBuffer[attributeId];
 
 			bufferList.forEach(function(buffer){
 				console.log('buffer',buffer)
@@ -112,7 +121,7 @@ window.app.objectProto = {//contains shared methods of all objects
 				value.primitive.dependentPrimitives.push(buffer.parentObject.primitive)
 			})
 		}
-		
+		return this
 	},
 	
 	removeAttributeValue: function (attributeType,value){//remove instance of 'value' from values of 'attributetype'
@@ -381,6 +390,7 @@ window.app.objectProto = {//contains shared methods of all objects
 		//console.log('adding value to attribute')
 		
 		var obj = this;
+		console.log(this.accordianContainer, attributeType)
 		var valueListDiv = this.accordianContainer.querySelector('.UUID'+attributeType)
 		var valueDiv = document.createElement('div')
 		var label = app.vis.getDisplayText(value)
