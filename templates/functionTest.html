@@ -1,0 +1,73 @@
+<!doctype html>
+<head>
+
+	<script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+	<script src="http://cdnjs.cloudflare.com/ajax/libs/d3/2.10.0/d3.v2.min.js"></script>
+
+	<script src="/static/app.js"></script>
+	<script>
+	window.onload = function(){
+	var importTemplateToFile = function(){
+		app.asyncCreateObject('ayh5mcvd0a7hz3t6b7z8vhtp', function(fileObject){
+			app.fileObject = fileObject
+			
+			//document.getElementById('accordianContainer').appendChild(fileObject.accordianContainer)
+		})
+		
+		
+		var initializationObjects = [
+			//'wyh5mcvd0a7hz3t6b7z8vhtp'//fileTemplate object
+		];
+		initializationObjects.forEach(function(templateID){
+			app.asyncCreateObject(templateID, function(){
+				console.log('loaded',templateID)
+			})
+		})
+	}
+	importTemplateToFile()
+	document.getElementById('jsonIn').addEventListener('keyup',function(){
+		try {
+			var object = app.synchronousCreateObject(JSON.parse(this.innerText))
+			document.getElementById('jsonOut').innerText = app.serializeObject(object)
+		} catch(e) {
+			document.getElementById('jsonOut').innerText = "invalid input";
+		}
+	});
+	}
+	</script>
+	<script src="/static/debugVis.js"></script>
+
+	<style>
+		.column-left{ float: left; width: 33%; }
+		.column-right{ float: right; width: 33%; }
+		.column-center{ display: inline-block; width: 33%; }
+		.button{
+			background: #dfdfdf;
+			cursor: pointer;
+		}
+	</style>
+
+</head>
+
+<body>
+
+	<a href="/">User Home</a>
+	
+	<div class="container" id="accordianContainer">
+		<div  class="column-center">
+			<h2>accordian tree</h2>
+			<div id="appContainer"></div>
+   		</div>
+   		<div  class="column-left">
+   			<h2>Json in</h2>
+   			<pre contentEditable="true" id="jsonIn">a</pre>
+   			
+   		</div>
+   		<div class="column-right">
+   			<h2>JSON out</h2>
+   			<pre contentEditable="true" id="jsonOut">a</pre>
+		</div>
+	</div>
+	
+
+</body>

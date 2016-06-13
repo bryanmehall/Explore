@@ -1,0 +1,47 @@
+<!doctype html>
+<head>
+
+	<script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+	<script src="http://cdnjs.cloudflare.com/ajax/libs/d3/2.10.0/d3.v2.min.js"></script>
+	
+	<script src="/static/app.js"></script>
+	<script src="/static/object.js"></script>
+	<script src="/static/vis.js"></script>
+	<script src="/static/primitives.js"></script>
+	<script src="/static/editorInit.js"></script>
+	<link rel="stylesheet" type="text/css" href="/static/style.css">
+</head>
+
+<body>
+
+	<a href="/objects">User Home</a>
+	<button id="saveFile"> save file</button>
+	<div id="saveTemplateDiv">
+		Template:
+		<button id="commitTemplate">commit url</button>
+		<button id="saveSelected">save selected</button>
+		<button id="forkTemplate">fork selected</button>
+		<button id="newTemplate">new</button>
+		
+	</div>
+	
+	<div class="container">
+		<div  class="column-center">
+			<h2>view</h2>
+	   		<div id="appContainer">
+	   			
+	   		</div>
+   		</div>
+   		<div id="accordianContainer" class="column-left">
+   			<h2>accordian tree</h2>
+			<div id="objectDiv"></div>
+			<div id="graphDiv"></div>
+   		</div>
+   		<div class="column-right">
+   			<h2>JSON</h2>
+   			<pre id="jsonText"></pre>
+		</div>
+	</div>
+	
+	<script src="//d3js.org/d3.v3.min.js"></script>
+</body>
