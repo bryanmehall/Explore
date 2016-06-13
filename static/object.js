@@ -86,6 +86,7 @@ window.app.objectProto = {//contains shared methods of all objects
 		} else if (this.isAnAttribute()){
 			console.log('attribute id', attributeUUID)
 			this.attributes[attributeUUID] = {attribute:attributeUUID, values:[]};
+			this.addAttributeToObjectVisualization({uuid:attributeUUID, attributes:{}}, [])
 		} else {
 			var newAttributeObject = app.createInstance(attributeObject)
 			var attributeDescriptor = {attribute:newAttributeObject, values:[]}
@@ -332,11 +333,11 @@ window.app.objectProto = {//contains shared methods of all objects
 		//} else {
 		attributeBlock.innerText = app.vis.getDisplayText(attributeObject);
 		attributeBlock.addEventListener('click',function(){
-			app.vis.displayObject(attributeObject)
+			app.vis.displayObject(attributeObject)//breaks for attribute of attribute
 		})
 		//}
 
-
+		console.log(attributeType)
 		attributeBlock.className = 'UUID'+attributeType;
 
 		values.forEach(function(value){
@@ -371,6 +372,7 @@ window.app.objectProto = {//contains shared methods of all objects
 		var attributeBlock = this.accordianContainer.querySelector('.UUID'+attributeType)
 		this.accordianContainer.querySelector('.attributeList').removeChild(attributeBlock)
 	},
+
 	removeValueFromVisualization(attributeType, value){
 		//find link with correct source, target and attribute id
 		var currentId = this.uuid
@@ -391,7 +393,7 @@ window.app.objectProto = {//contains shared methods of all objects
 		
 		var obj = this;
 		console.log(this.accordianContainer, attributeType)
-		var valueListDiv = this.accordianContainer.querySelector('.UUID'+attributeType)
+		var valueListDiv = this.accordianContainer.querySelector('.UUID' + attributeType)
 		var valueDiv = document.createElement('div')
 		var label = app.vis.getDisplayText(value)
 		valueDiv.innerText = label;
@@ -410,18 +412,18 @@ window.app.objectProto = {//contains shared methods of all objects
 		}
 		var source = getById(this.uuid)
 		var target = getById(value.uuid)
-
+		console.log('at',attributeType["type"])
 		switch(attributeType){
 			case app.tempTable.instanceOf:
 				target.color = '#ccc'
-				//app.vis.links.push({source: source, target: target, color:'#ccc'});
+				app.vis.links.push({source: source, target: target, color:'#ccc'});
 				break;
 			case app.tempTable.textRepresentation:
 				app.vis.links.push({source: source, target: target, attrId:attributeType, color:'#ffa5a5'});
 				break;
 			case app.tempTable.nameEn:
 				target.color = '#9fd397'
-				//app.vis.links.push({source: source, target: target, color:'#ccffcc'});
+				app.vis.links.push({source: source, target: target, color:'#ccffcc'});
 				source.label = target.object.primitive.element
 				app.vis.start()
 				break;

@@ -39,11 +39,16 @@ window.app = {
 				instanceOfObject.initPrimitive('attribute',null)
 					.addAttribute(instanceOfObject)
 					.extendAttribute(instanceOfObject,attributeObject)
-				
-				cb()
+				instanceOfObject.uuid = app.tempTable.instanceOf
+				createnameEnOfObject(attributeObject)
 				//createInstanceOfObject()
 			})
-			
+		}
+		function createnameEnOfObject(attributeObject){
+			app.createInstance(app.tempTable.attribute, function(nameEnObject){
+				
+				cb()
+			})
 		}
 		
 	},

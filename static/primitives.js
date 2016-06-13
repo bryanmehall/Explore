@@ -49,7 +49,7 @@ window.app.primitives = {
 				extensive:null,//type: bool
 				types:[], //any type
 				instanceOf:null, //any type
-				default:null, //any type
+				defaultObject:null, //any type
 				symmetricAttribute:null, //type: Property
 				//should all of these be here?
 				reflexive:null, // type:bool
@@ -57,6 +57,7 @@ window.app.primitives = {
 				transitive: null
 			}
 		},
+
 		save:function(){
 			return {name:'attribute', value:null}
 		},
