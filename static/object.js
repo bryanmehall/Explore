@@ -103,7 +103,7 @@ window.app.objectProto = {//contains shared methods of all objects
 	 * @param {object}   value         [[Description]]
 	 */
 	extendAttribute: function (attributeObject,value){
-		console.log('extending attribute', attributeObject)
+		console.log('extending attribute', attributeObject, value)
 		var attributeId = attributeObject.uuid
 		var parentObject = this;
 		console.log('a',this.attributes)
@@ -185,7 +185,7 @@ window.app.objectProto = {//contains shared methods of all objects
 	},
 	
 	//object visualization methods
-	createObjectVisualization(){
+	createObjectVisualization: function(){
 		var obj = this;
 		
 		//create tree
@@ -373,7 +373,7 @@ window.app.objectProto = {//contains shared methods of all objects
 		this.accordianContainer.querySelector('.attributeList').removeChild(attributeBlock)
 	},
 
-	removeValueFromVisualization(attributeType, value){
+	removeValueFromVisualization: function(attributeType, value){
 		//find link with correct source, target and attribute id
 		var currentId = this.uuid
 		var link = app.vis.links.filter(function(linkData){
@@ -390,7 +390,7 @@ window.app.objectProto = {//contains shared methods of all objects
 	
 	addValueToAttribute: function (attributeType, value){
 		//console.log('adding value to attribute')
-		
+		console.log(attributeType,value)
 		var obj = this;
 		console.log(this.accordianContainer, attributeType)
 		var valueListDiv = this.accordianContainer.querySelector('.UUID' + attributeType)
@@ -408,7 +408,8 @@ window.app.objectProto = {//contains shared methods of all objects
 					return nodes[i]
 				}
 			}
-			console.log('didnt find any', id)
+			c
+			throw 'id '+ id+' not found in nodes list'
 		}
 		var source = getById(this.uuid)
 		var target = getById(value.uuid)
@@ -423,8 +424,9 @@ window.app.objectProto = {//contains shared methods of all objects
 				break;
 			case app.tempTable.nameEn:
 				target.color = '#9fd397'
+				console.log(source,target)
 				app.vis.links.push({source: source, target: target, color:'#ccffcc'});
-				source.label = target.object.primitive.element
+				//source.label = target.object.primitive.element
 				app.vis.start()
 				break;
 			default:

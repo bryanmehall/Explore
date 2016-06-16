@@ -5,11 +5,12 @@ window.app = {
 		fileUUID:'fileId',
 		attribute:'attributeId',
 		instanceOf:'instanceOfId',
+		string:'stringId',
 		childElements:'jhkr9c44a68qs54rk3addmv8',
 		parentElement:'5grmpy33zd3tkljbhs2j04ar',
 		selectedObjects:'cw3s6fl6s3p9rvqyh90d108x',
 		parentConcept:'mkccvvqh38apgddwn08zx11v',
-		nameEn:'dfzz0y7g6x55pq6rag5pyw43',
+		nameEn:'nameEnId',
 		textRepresentation:'lsbqsxcsbty6zwp35d51vx02',
 		width:'4tkkhvs7xs157gvmvhzvzj30',
 		height:' h9rfmjwtwlawx6fqycrpbylj',
@@ -21,34 +22,64 @@ window.app = {
 		//to use, delete all entries in database and then crete new enter 
 		//init file object
 		createFileObject()
+		var objects = {}
 		function createFileObject(){
 			app.newObject(app.tempTable.fileUUID,function(fileObject){
 				fileObject.initPrimitive('file',null)
+				createStringObject()
+			})
+		}
+		function createStringObject(){
+			app.newObject(app.tempTable.string,function(stringObject){
+				stringObject.initPrimitive('string',null)
+				objects.string = stringObject
 				createAttributeObject()
 			})
 		}
 		function createAttributeObject(){
 			app.newObject(app.tempTable.attribute,function(attributeObject){
 				attributeObject.initPrimitive('attribute',null)
-				createInstanceOfObject(attributeObject)
+				objects.attribute = attributeObject
+				createInstanceOfObject()
+				
 			})
 			
 		}
-		function createInstanceOfObject(attributeObject){
+		function createInstanceOfObject(){
+			var attributeObject = objects.attribute
 			app.createInstance(app.tempTable.attribute, function(instanceOfObject){
 				instanceOfObject.initPrimitive('attribute',null)
 					.addAttribute(instanceOfObject)
-					.extendAttribute(instanceOfObject,attributeObject)
+					.extendAttribute(instanceOfObject,objects.attribute)
 				instanceOfObject.uuid = app.tempTable.instanceOf
-				createnameEnOfObject(attributeObject)
+				objects.instanceOf = instanceOfObject
+				createnameEnObject()
 				//createInstanceOfObject()
 			})
 		}
-		function createnameEnOfObject(attributeObject){
+		function createnameEnObject(){
 			app.createInstance(app.tempTable.attribute, function(nameEnObject){
-				
-				cb()
+					
+					nameEnObject.initPrimitive('attribute',null)
+						.addAttribute(objects.instanceOf)
+						.extendAttribute(objects.instanceOf,objects.attribute)
+						//.addAttribute(nameEnObject,)
+					nameEnObject.uuid = app.tempTable.nameEn
+					objects.nameEn = nameEnObject
+				addNamesToObjects()
 			})
+		}
+		function addNamesToObjects(){
+			function addName(obj){
+				app.createInstance(app.tempTable.string, function(stringObject){
+					stringObject.primitive.set(obj.uuid)
+					obj.addAttribute(objects.nameEn)
+						.extendAttribute(objects.nameEn, stringObject)
+				})
+				
+			}
+			addName(objects.instanceOf)
+			cb()
 		}
 		
 	},
@@ -258,8 +289,6 @@ window.app = {
 	 * @returns {[[Type]]} [[Description]]
 	 */
 	createAttribute(templateObject, newObject){//move to within createInstance?
-		console.log('creating attribute of Attribute')
-		
 		Object.keys(templateObject.attributes).forEach(function(attributeName){
 			var attributeDescriptor = templateObject.attributes[attributeName]
 			if(attributeDescriptor.values.length !== 1){
@@ -270,7 +299,7 @@ window.app = {
 		})
 		newObject.addObjectToVisualization()//eventually replace
 		newObject.createObjectVisualization()
-		console.log('new', newObject)
+		
 		return newObject
 	},
 	
