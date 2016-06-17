@@ -78,7 +78,7 @@ window.app = {
 				})
 				
 			}
-			addName(objects.instanceOf)
+			addName(objects.attribute)
 			cb()
 		}
 		

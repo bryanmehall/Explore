@@ -29,19 +29,19 @@ window.app.vis = {
 		if (obj.attributes.hasOwnProperty(app.tempTable.nameEn)){
 			var label = obj.attributes[app.tempTable.nameEn].values[0].primitive.element.innerText
 		} else {
-			var label = obj.uuid.substring(0,4)
+			var label = obj.uuid.substring(0,8)
 		}
 		return label
 	},
 	
-	getNodeById:function(id){
+	getById :function(id){
 		var nodes = app.vis.nodes;
-			for (var i=0; i<nodes.length; i++){
-				if (nodes[i].id === id){
-					return nodes[i]
-				}
+		for (var i=0; i<nodes.length; i++){
+			if (nodes[i].id === id){
+				return nodes[i]
 			}
-			console.log('didnt find any', id)
+		}
+		throw 'id ' + id + ' not found in nodes list'
 	},
 	
 	init: function() {

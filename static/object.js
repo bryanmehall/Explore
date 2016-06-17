@@ -401,16 +401,7 @@ window.app.objectProto = {//contains shared methods of all objects
 			app.vis.displayObject(value)
 		})
 		valueListDiv.appendChild(valueDiv)
-		var getById = function(id){
-			var nodes = app.vis.nodes;
-			for (var i=0; i<nodes.length; i++){
-				if (nodes[i].id === id){
-					return nodes[i]
-				}
-			}
-			c
-			throw 'id '+ id+' not found in nodes list'
-		}
+		var getById = app.vis.getById
 		var source = getById(this.uuid)
 		var target = getById(value.uuid)
 		console.log('at',attributeType["type"])
