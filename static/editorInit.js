@@ -84,7 +84,7 @@ window.onload = function(){
 		app.tempTable.currentUUID = path.split('/').slice(-1)[0]
 		app.initDatabase(function(){
 			app.loadObject(app.tempTable.fileUUID, function(masterFileObject){
-				app.createInstance(masterFileObject.uuid, function(fileObject){
+				app.createInstance(masterFileObject, function(fileObject){
 					//load file into dom here
 				})
 			})

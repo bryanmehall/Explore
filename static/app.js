@@ -26,6 +26,7 @@ window.app = {
 		function createFileObject(){
 			app.newObject(app.tempTable.fileUUID,function(fileObject){
 				fileObject.initPrimitive('file',null)
+				objects.file = fileObject
 				createStringObject()
 			})
 		}
@@ -47,18 +48,19 @@ window.app = {
 		}
 		function createInstanceOfObject(){
 			var attributeObject = objects.attribute
-			app.createInstance(app.tempTable.attribute, function(instanceOfObject){
+			app.createInstance(objects.attribute, function(instanceOfObject){
 				instanceOfObject.initPrimitive('attribute',null)
 					.addAttribute(instanceOfObject)
 					.extendAttribute(instanceOfObject,objects.attribute)
-				instanceOfObject.uuid = app.tempTable.instanceOf
+				instanceOfObject.setId(app.tempTable.instanceOf)
 				objects.instanceOf = instanceOfObject
 				createnameEnObject()
-				//createInstanceOfObject()
+
 			})
 		}
+
 		function createnameEnObject(){
-			app.createInstance(app.tempTable.attribute, function(nameEnObject){
+			app.createInstance(objects.attribute, function(nameEnObject){
 					
 					nameEnObject.initPrimitive('attribute',null)
 						.addAttribute(objects.instanceOf)
@@ -69,9 +71,10 @@ window.app = {
 				addNamesToObjects()
 			})
 		}
+
 		function addNamesToObjects(){
 			function addName(obj){
-				app.createInstance(app.tempTable.string, function(stringObject){
+				app.createInstance(objects.string, function(stringObject){
 					stringObject.primitive.set(obj.uuid)
 					obj.addAttribute(objects.nameEn)
 						.extendAttribute(objects.nameEn, stringObject)
@@ -79,6 +82,8 @@ window.app = {
 				
 			}
 			addName(objects.attribute)
+			addName(objects.file)
+			addName
 			cb()
 		}
 		
@@ -154,115 +159,7 @@ window.app = {
 		return []
 	},
 	
-	newObjectSelector: function(typeRestrictions, eventLocation, cb) {
-		//open object search functionality
-		var typeRestrictions 	= typeRestrictions || [];
-		var box 				= document.createElement('div');
-		var accordianDiv 		= document.getElementById('accordianContainer');
-		var accordianObjects 	= document.querySelectorAll('.accordianObject');
-		
-		app.selectingObject       	= true
-		box.style.position        	= 'absolute'
-		box.style.top             	= '100px'
-		box.style.backgroundColor 	= '#fafafa'
-		
-		var textArea = document.createElement('input');
-		box.appendChild(textArea)
-		
-		var options = document.createElement('div')
-		box.appendChild(options)
-		var appDiv = document.getElementById('appContainer')
-		appDiv.appendChild(box)
-		var accordianObjectsList = []
-		for (var i = 0; i < accordianObjects.length; i++){
-			accordianObjectsList.push(accordianObjects[i]);
-
-		}
-		//current object selection tools
-		var node = app.vis.svg.selectAll("g")
-		
-		node.append('circle')
-			.attr('r', 8)
-			.on('click', function(d){
-				closeSelectionBox()
-				cb(d.object, d.object.uuid)
-			})
-		
-		document.addEventListener('keyup', function(event){
-			if (event.keyCode === 27){
-				closeSelectionBox()
-				app.selectingObject = false
-			}
-		})
-		
-		
-		var closeSelectionBox = function(){
-			var targets = document.querySelectorAll('.target')
-			for (var i = 0; i < targets.length; i++){
-				targets[i].parentNode.removeChild(targets[i])
-			}
-			node.selectAll('circle').remove()
-			box.parentNode.removeChild(box)	
-		};
-		
-		var inputChangeHandler = function() {
-			var newOptions = document.createElement('div');
-			var updateMatchList = function(matches){
-				matches.forEach(function(item) {
-					var itemDom = document.createElement('div');
-					itemDom.innerText = item[2];
-					newOptions.appendChild(itemDom)
-					box.replaceChild(newOptions, options)
-					options = newOptions
-				})
-			}
-			
-			if (textArea.value[0] === '\\' ||textArea.value[0] === '\_'){
-				var searchTerm = textArea.value.slice(1)
-				app.searchTemplates(searchTerm,function(matches){
-					if (matches.length === 1) {
-							var singleMatch = matches[0][1]
-							
-							if (textArea.value[0] === '\\'){
-								app.createInstance(singleMatch, function(ob){
-									app.selectingObject = false
-									closeSelectionBox()
-									cb(ob,singleMatch)
-									})
-							} else {
-								app.loadObject(singleMatch, function(ob){
-									
-									app.selectingObject = false
-									closeSelectionBox()
-									cb(ob,singleMatch)
-									})
-							}
-					}
-					updateMatchList(matches)
-				})	
-			} else {
-				var numberOfResults = 10
-				var matches = app.searchObjects(this.value,numberOfResults)
-				if (matches.length === 1){
-					
-				} else {
-					updateMatchList(matches)
-				}
-			}
-			
-				
-		}
-		textArea.addEventListener('keyup', inputChangeHandler)
-		textArea.focus()
-	},
-	
-	mergeAttributes: function(object1, object2) {
-		Object.keys(object1.attributes).forEach(function(attributeType){
-			var matchIndex = Object.keys(object2.attributes).indexOf(attributeType)
-		})
-	},
-	
-	newObject: function(uuid, callback){//make this create instance of object
+	newObject: function(uuid, callback){
 		//creates new object
 		$.ajax({
 				type: 'POST',
@@ -288,27 +185,15 @@ window.app = {
 	 * @param   {[[Type]]} newObject      [[Description]]
 	 * @returns {[[Type]]} [[Description]]
 	 */
-	createAttribute(templateObject, newObject){//move to within createInstance?
-		Object.keys(templateObject.attributes).forEach(function(attributeName){
-			var attributeDescriptor = templateObject.attributes[attributeName]
-			if(attributeDescriptor.values.length !== 1){
-				throw 'attribute of '+ templateObject.uuid + 'has a cardinality greater than one'
-			} else {
-				templateObject.addAttribute()
-			}
-		})
-		newObject.addObjectToVisualization()//eventually replace
-		newObject.createObjectVisualization()
-		
-		return newObject
-	},
 	
-	createInstance: function(parentUUID,cb) {//should this just be parentObject instead of uuid?
-		console.log('creating instance', parentUUID)
+	
+	createInstance: function(parentObject,cb) {//should this just be parentObject instead of uuid?
+
+		console.log('creating instance', parentObject.uuid)
 		var app = this;
 		
 		var map = {}; //mapping between template and instance objects for terminating loops
-		var create = function(templateUUID){
+		var create = function(){
 			
 			//initialize object
 			var newObject = Object.create(app.objectProto);
@@ -316,17 +201,17 @@ window.app = {
 			newObject.attributes = {};
 			newObject.dependents = [];
 			newObject.attributePrimitiveBuffer = {};
-			map[templateUUID] = newObject;
+			map[parentObject.uuid] = newObject;
 			//retrieve template
-			var templateObject = app.objectCache[templateUUID]
+			var templateObject = parentObject//app.objectCache[parentObject.uuid]
 			
 			//initialize primitive if needed
 			if (templateObject.hasOwnProperty('primitive')){
 				var primitiveString = templateObject.primitive.save()
 				newObject.initPrimitive(primitiveString.name, primitiveString.value)
 				if(templateObject.isAnAttribute()){
-					console.log('at', newObject.primitive)
-					return app.createAttribute(templateObject,newObject)
+					var attributeObject = app.createAttribute(templateObject,newObject)
+					cb(attributeObject)
 				}
 			}
 			
@@ -337,14 +222,15 @@ window.app = {
 			//initialize attributes with special cases
 			
 			
-			
 			//initialize remaining attributes
-			Object.keys(templateObject.attributes).forEach(function(attributeKey){
+			templateObject.getAttrs().forEach(function(attrObj){
 				
-				var attributeObject = app.createInstance(attributeKey)//change to createInstance
-				newObject.addAttribute(attributeObject) //possible loop created here
+				var newAttrObj = app.createInstance(attrObj,function(){
+					newObject.addAttribute(attributeObject)
+				})
+				 //possible loop created here
 
-				templateObject.attributes[attributeKey].values.forEach(function(attributeValue,index){
+				templateObject.getAttrValues(templateAttributeObject).forEach(function(attributeValue,index){
 					var targetUUID = templateObject.attributes[attributeKey].values[index].uuid
 					if (map.hasOwnProperty(targetUUID)){//need to make work for multiple values
 						var newValue = map[targetUUID]
@@ -356,33 +242,31 @@ window.app = {
 						map[targetUUID] = newValue
 						
 					}
-					
 					newObject.extendAttribute(attributeKey,newValue)
 				})
-				
-				
 			})
 			app.objectCache[newObject.uuid]=newObject
+
 			return newObject
 		};
-		
-		
-		if (!app.templateCache.hasOwnProperty(parentUUID)){
-			//console.log('templateCache does not have property')
-			app.loadObject(parentUUID, function(parentObject){
-				var newObject = create(parentUUID);
-				app.newObject(newObject.uuid,'',app.serializeElement(newObject),function(response){
-					cb(newObject);
-				})
-			})
-		} else {
-			var newObject = create(parentUUID); //parent 
-			console.log(newObject)
-			cb(newObject);
-		}
+		cb(create(parentObject))
+
 	},
 	
-	
+	createAttribute: function(templateObject, newObject){//move to within createInstance?
+		Object.keys(templateObject.attributes).forEach(function(attributeName){
+			var attributeDescriptor = templateObject.attributes[attributeName]
+			if(attributeDescriptor.values.length !== 1){
+				throw 'attribute of '+ templateObject.uuid + 'has a cardinality greater than one'
+			} else {
+				templateObject.addAttribute()
+			}
+		})
+		newObject.addObjectToVisualization()//eventually replace
+		newObject.createObjectVisualization()
+				console.log(newObject)
+		return newObject
+	},
 	/**
 	 * Loads object with uuid from database, creates it and places it in the templateCache
 	 * @param {[[Type]]} uuid [[Description]]
@@ -434,7 +318,6 @@ window.app = {
 		})
 		
 	},
-	
 	/**
 	 * Creates object where JSON data is already loaded into JSONCache
 	 * @param   {[[Type]]} uuid uuid of object to be created
@@ -534,6 +417,7 @@ window.app = {
 		//save attributes
 		Object.keys(element.attributes).forEach(function(key){
 			var attribute = element.attributes[key];
+			console.log(element,aattribute)
 			var typeUUID = attribute.attribute.uuid
 			addDepencency(attribute.attribute)
 			var values = [];
@@ -608,7 +492,113 @@ window.app = {
 		
 		})
 		
+	},
+
+	newObjectSelector: function(typeRestrictions, eventLocation, cb) {
+		//open object search functionality
+		var typeRestrictions 	= typeRestrictions || [];
+		var box 				= document.createElement('div');
+		var accordianDiv 		= document.getElementById('accordianContainer');
+		var accordianObjects 	= document.querySelectorAll('.accordianObject');
+		
+		app.selectingObject       	= true
+		box.style.position        	= 'absolute'
+		box.style.top             	= '100px'
+		box.style.backgroundColor 	= '#fafafa'
+		
+		var textArea = document.createElement('input');
+		box.appendChild(textArea)
+		
+		var options = document.createElement('div')
+		box.appendChild(options)
+		var appDiv = document.getElementById('appContainer')
+		appDiv.appendChild(box)
+		var accordianObjectsList = []
+		for (var i = 0; i < accordianObjects.length; i++){
+			accordianObjectsList.push(accordianObjects[i]);
+
+		}
+		//current object selection tools
+		var node = app.vis.svg.selectAll("g")
+		
+		node.append('circle')
+			.attr('r', 8)
+			.on('click', function(d){
+				closeSelectionBox()
+				cb(d.object, d.object.uuid)
+			})
+		
+		document.addEventListener('keyup', function(event){
+			if (event.keyCode === 27){
+				closeSelectionBox()
+				app.selectingObject = false
+			}
+		})
+		
+		
+		var closeSelectionBox = function(){
+			var targets = document.querySelectorAll('.target')
+			for (var i = 0; i < targets.length; i++){
+				targets[i].parentNode.removeChild(targets[i])
+			}
+			node.selectAll('circle').remove()
+			box.parentNode.removeChild(box)	
+		};
+		
+		var inputChangeHandler = function() {
+			var newOptions = document.createElement('div');
+			var updateMatchList = function(matches){
+				matches.forEach(function(item) {
+					var itemDom = document.createElement('div');
+					itemDom.innerText = item[2];
+					newOptions.appendChild(itemDom)
+					box.replaceChild(newOptions, options)
+					options = newOptions
+				})
+			}
+			
+			if (textArea.value[0] === '\\' ||textArea.value[0] === '\_'){
+				var searchTerm = textArea.value.slice(1)
+				app.searchTemplates(searchTerm,function(matches){
+					if (matches.length === 1) {
+							var singleMatch = matches[0][1]
+							
+							if (textArea.value[0] === '\\'){
+								app.loadObject(singleMatch,function(template){
+									app.createInstance(template, function(ob){
+									app.selectingObject = false
+									closeSelectionBox()
+									cb(ob,singleMatch)
+								})
+								})
+								
+							} else {
+								app.loadObject(singleMatch, function(ob){
+									
+									app.selectingObject = false
+									closeSelectionBox()
+									cb(ob,singleMatch)
+									})
+							}
+					}
+					updateMatchList(matches)
+				})	
+			} else {
+				var numberOfResults = 10
+				var matches = app.searchObjects(this.value,numberOfResults)
+				if (matches.length === 1){
+					
+				} else {
+					updateMatchList(matches)
+				}
+			}
+			
+				
+		}
+		textArea.addEventListener('keyup', inputChangeHandler)
+		textArea.focus()
 	}
+
 };
 
 //when loading object if it has a defined type then run a git merge operation on the stored template and on the 

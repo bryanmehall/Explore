@@ -1,16 +1,29 @@
 window.app.objectProto = {//contains shared methods of all objects
 	//primitive methods
 	vis:{},
-	
+
+
+
+
+	//*********************helpers********************************
+
+
 	setId: function(newId){
 		this.uuid = newId
+		console.log(app.objectCache)
 	},
+
+	setUUID: function(newId){
+		this.uuid = newId;
+
+	},
+
 	/**
 	 * Links the current object with a primitive assiciated with a specific attribute with Link function
 	 * @param {UUID} attributeTypeUUID uuid of attribute to link with
 	 * @param {function} linkFunction      function to execute upon linking
 	 */
-	subscribe: function (attributeTypeUUID, linkFunction){
+	subscribe: function (attributeTypeUUID, linkFunction){//move to primitive?
 		console.log('subscribing', this.uuid,'to', attributeTypeUUID)
 		var targetObject = this.attributes[attributeTypeUUID];
 
@@ -65,13 +78,23 @@ window.app.objectProto = {//contains shared methods of all objects
 		//add support for transitive relations
 		return this.attributes[typeUUID].values
 	},
+
 	
+
 	hasAttribute: function(type){
 		return this.attributes.hasOwnProperty(type)
 	},
 	
-	isAnAttribute(){
+	isAnAttribute: function(){
 		return this.hasOwnProperty('primitive') && this.primitive.type === "attribute"
+	},
+	
+	getAttrs: function(){
+		var attrs = [] 
+		Object.keys(this.attributes).forEach(function(attrId){
+			attrs.push(this.attributes[attrId].attribute)
+		})
+		return attrs
 	},
 	/**
 	 * Adds instance of attribute given by attributeObject to the parent object
@@ -80,6 +103,7 @@ window.app.objectProto = {//contains shared methods of all objects
 	addAttribute: function(attributeObject) {
 		var app = window.app
 		var parentObject = this;
+
 		var attributeUUID = attributeObject.uuid
 		if (this.attributes.hasOwnProperty(attributeUUID)){
 			console.log('already has attribute',this.attributes,attributeUUID)
@@ -96,7 +120,30 @@ window.app.objectProto = {//contains shared methods of all objects
 		return this
 	},
 	
-	
+
+		/**
+	 * Remove attribute from object and 
+	 * @param {[[Type]]} attributeType [[Description]]
+	 */
+	removeAttribute: function (attributeType){
+		//remove primitive connections
+		delete this.attributes[attributeType]
+		console.log(this.attributes)
+		this.removeAttributeFromVisualization(attributeType)
+	},
+
+	getAttrValues: function(attributeObject){
+		//current format: attrID{attribute:attributeObject, values:[]}
+		//new format: map attributeObject:set
+		//make the current setup work with attribute object instead of id
+		Object.keys(this.attributes).forEach(function(key){
+			var descriptor = this.attributes[key];
+			if (descriptor.attribute === attributeObject){
+				return descriptor.values
+			}
+		})
+		console.log('attributeObject did not match')
+	},
 	/**
 	 * Adds value to the list of values for this objects attribute
 	 * @param {UUID} attributeType [[Description]]
@@ -124,7 +171,7 @@ window.app.objectProto = {//contains shared methods of all objects
 		}
 		return this
 	},
-	
+
 	removeAttributeValue: function (attributeType,value){//remove instance of 'value' from values of 'attributetype'
 		//check cardinality
 		//check for reflexive attributes
@@ -139,16 +186,7 @@ window.app.objectProto = {//contains shared methods of all objects
 	},
 	
 	
-	/**
-	 * Remove attribute from object and 
-	 * @param {[[Type]]} attributeType [[Description]]
-	 */
-	removeAttribute: function (attributeType){
-		//remove primitive connections
-		delete this.attributes[attributeType]
-		console.log(this.attributes)
-		this.removeAttributeFromVisualization(attributeType)
-	},
+
 	
 	/**
 	 * Replaces object with another --more rigerous definition still needed
@@ -184,6 +222,26 @@ window.app.objectProto = {//contains shared methods of all objects
 		
 	},
 	
+ 	remove: function(){
+ 		var uuid = this.uuid
+		$.ajax({
+			type: 'GET',
+			url: '/object/delete/'+uuid,
+			data: '',
+			success: function(response) {
+				console.log("Deleted "+uuid)
+			},
+			error: function(err) {
+				console.log('error posting to server...');
+				console.log(err);
+			}
+		});
+	},
+
+
+
+
+
 	//object visualization methods
 	createObjectVisualization: function(){
 		var obj = this;
@@ -404,7 +462,6 @@ window.app.objectProto = {//contains shared methods of all objects
 		var getById = app.vis.getById
 		var source = getById(this.uuid)
 		var target = getById(value.uuid)
-		console.log('at',attributeType["type"])
 		switch(attributeType){
 			case app.tempTable.instanceOf:
 				target.color = '#ccc'
