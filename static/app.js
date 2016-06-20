@@ -1,6 +1,12 @@
 "use strict";
 window.app = {
-
+	count : 0,
+	loopStop: function(){
+		if (this.count>10){
+			throw 'count exceded'
+		}
+		this.count += 1
+	},
 	tempTable:{
 		fileUUID:'fileId',
 		attribute:'attributeId',
@@ -83,7 +89,6 @@ window.app = {
 			}
 			addName(objects.attribute)
 			addName(objects.file)
-			addName
 			cb()
 		}
 		
@@ -188,7 +193,7 @@ window.app = {
 	
 	
 	createInstance: function(parentObject,cb) {//should this just be parentObject instead of uuid?
-
+		
 		console.log('creating instance', parentObject.uuid)
 		var app = this;
 		
@@ -211,7 +216,11 @@ window.app = {
 				newObject.initPrimitive(primitiveString.name, primitiveString.value)
 				if(templateObject.isAnAttribute()){
 					var attributeObject = app.createAttribute(templateObject,newObject)
-					cb(attributeObject)
+					if(cb===undefined){
+						return create(attributeObject)
+					} else {
+						cb(attributeObject)
+					}
 				}
 			}
 			
@@ -249,17 +258,23 @@ window.app = {
 
 			return newObject
 		};
-		cb(create(parentObject))
+		//this is ugly but it makes it either a synchronous function or async
+		if(cb===undefined){
+			return create(parentObject)
+		} else {
+			cb(create(parentObject))
+		}
+		
 
 	},
 	
 	createAttribute: function(templateObject, newObject){//move to within createInstance?
 		Object.keys(templateObject.attributes).forEach(function(attributeName){
 			var attributeDescriptor = templateObject.attributes[attributeName]
-			if(attributeDescriptor.values.length !== 1){
-				throw 'attribute of '+ templateObject.uuid + 'has a cardinality greater than one'
+			if(attributeDescriptor.values.length > 1){
+				throw 'attribute of '+ templateObject.uuid + ' has a cardinality greater than one'
 			} else {
-				templateObject.addAttribute()
+				templateObject.addAttribute(templateObject)
 			}
 		})
 		newObject.addObjectToVisualization()//eventually replace
@@ -417,7 +432,7 @@ window.app = {
 		//save attributes
 		Object.keys(element.attributes).forEach(function(key){
 			var attribute = element.attributes[key];
-			console.log(element,aattribute)
+			console.log(element,attribute)
 			var typeUUID = attribute.attribute.uuid
 			addDepencency(attribute.attribute)
 			var values = [];

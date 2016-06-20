@@ -51,7 +51,7 @@ window.app.objectProto = {//contains shared methods of all objects
 	 * @param {[[Type]]} primitiveValue value for parseString function to parse
 	 */
 	initPrimitive: function(primitiveName, primitiveValue){
-		console.log('initializing',this.uuid,primitiveName)
+		console.log('initializing',this.uuid, primitiveName)
 		var primitive = Object.create(app.primitives[primitiveName])
 		primitive.dependentPrimitives = [];
 		this.primitive = primitive;
@@ -69,7 +69,6 @@ window.app.objectProto = {//contains shared methods of all objects
 	 * @returns {jsArray} [[Description]]
 	 */
 	getAttributeByUUID: function(typeUUID, index){
-		
 		if (this.hasOwnProperty('primitive') && this.primitive.type === ''){//handle getting attributes of attributes
 			
 		}
@@ -91,8 +90,9 @@ window.app.objectProto = {//contains shared methods of all objects
 	
 	getAttrs: function(){
 		var attrs = [] 
+		var obj = this
 		Object.keys(this.attributes).forEach(function(attrId){
-			attrs.push(this.attributes[attrId].attribute)
+			attrs.push(obj.attributes[attrId].attribute)
 		})
 		return attrs
 	},
@@ -102,15 +102,18 @@ window.app.objectProto = {//contains shared methods of all objects
 	 */
 	addAttribute: function(attributeObject) {
 		var app = window.app
+		app.loopStop()
+		
 		var parentObject = this;
-
 		var attributeUUID = attributeObject.uuid
+		if (attributeUUID === undefined){throw 'undefined'}
+		console.log('adding attribute', attributeUUID, attributeObject )
+
 		if (this.attributes.hasOwnProperty(attributeUUID)){
 			console.log('already has attribute',this.attributes,attributeUUID)
 		} else if (this.isAnAttribute()){
-			console.log('attribute id', attributeUUID)
-			this.attributes[attributeUUID] = {attribute:attributeUUID, values:[]};
-			this.addAttributeToObjectVisualization({uuid:attributeUUID, attributes:{}}, [])
+			this.attributes[attributeUUID] = {attribute:attributeObject, values:[]};
+			this.addAttributeToObjectVisualization(attributeObject, [])
 		} else {
 			var newAttributeObject = app.createInstance(attributeObject)
 			var attributeDescriptor = {attribute:newAttributeObject, values:[]}

@@ -26,8 +26,12 @@ window.app.vis = {
 	},
 	
 	getDisplayText:function(obj){
-		if (obj.attributes.hasOwnProperty(app.tempTable.nameEn)){
-			var label = obj.attributes[app.tempTable.nameEn].values[0].primitive.element.innerText
+		if(!obj.hasOwnProperty('attributes')){
+			console.log(obj)
+			var label = 'attr'
+		}
+		else if (obj.attributes.hasOwnProperty(app.tempTable.nameEn)){
+			var label = obj.getAttrs()[0].primitive.element.innerText
 		} else {
 			var label = obj.uuid.substring(0,8)
 		}
