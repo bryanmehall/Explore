@@ -105,9 +105,13 @@ window.app.objectProto = {//contains shared methods of all objects
 		app.loopStop()
 		
 		var parentObject = this;
+		console.log(this, attributeObject)
 		var attributeUUID = attributeObject.uuid
-		if (attributeUUID === undefined){throw 'undefined'}
-		console.log('adding attribute', attributeUUID, attributeObject )
+		console.log('adding attribute',this, attributeUUID, attributeObject )
+		if (attributeUUID === undefined){
+			throw 'attributeUUID undefined'
+		}
+		
 
 		if (this.attributes.hasOwnProperty(attributeUUID)){
 			console.log('already has attribute',this.attributes,attributeUUID)
@@ -139,13 +143,16 @@ window.app.objectProto = {//contains shared methods of all objects
 		//current format: attrID{attribute:attributeObject, values:[]}
 		//new format: map attributeObject:set
 		//make the current setup work with attribute object instead of id
+		var obj = this;
+		var values;
 		Object.keys(this.attributes).forEach(function(key){
-			var descriptor = this.attributes[key];
-			if (descriptor.attribute === attributeObject){
-				return descriptor.values
+			var descriptor = obj.attributes[key];
+			if (descriptor.attribute===attributeObject){
+				values = descriptor.values;
 			}
 		})
-		console.log('attributeObject did not match')
+		return values
+		//console.log('attributeObject did not match',this.attributes, attributeObject)
 	},
 	/**
 	 * Adds value to the list of values for this objects attribute
@@ -454,6 +461,7 @@ window.app.objectProto = {//contains shared methods of all objects
 		console.log(attributeType,value)
 		var obj = this;
 		console.log(this.accordianContainer, attributeType)
+		
 		var valueListDiv = this.accordianContainer.querySelector('.UUID' + attributeType)
 		var valueDiv = document.createElement('div')
 		var label = app.vis.getDisplayText(value)

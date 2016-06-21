@@ -2,7 +2,7 @@
 window.app = {
 	count : 0,
 	loopStop: function(){
-		if (this.count>10){
+		if (this.count>20){
 			throw 'count exceded'
 		}
 		this.count += 1
@@ -11,7 +11,7 @@ window.app = {
 		fileUUID:'fileId',
 		attribute:'attributeId',
 		instanceOf:'instanceOfId',
-		string:'stringId',
+		string:'stringid',
 		childElements:'jhkr9c44a68qs54rk3addmv8',
 		parentElement:'5grmpy33zd3tkljbhs2j04ar',
 		selectedObjects:'cw3s6fl6s3p9rvqyh90d108x',
@@ -33,25 +33,28 @@ window.app = {
 			app.newObject(app.tempTable.fileUUID,function(fileObject){
 				fileObject.initPrimitive('file',null)
 				objects.file = fileObject
-				createStringObject()
-			})
-		}
-		function createStringObject(){
-			app.newObject(app.tempTable.string,function(stringObject){
-				stringObject.initPrimitive('string',null)
-				objects.string = stringObject
 				createAttributeObject()
 			})
 		}
+		
 		function createAttributeObject(){
 			app.newObject(app.tempTable.attribute,function(attributeObject){
 				attributeObject.initPrimitive('attribute',null)
 				objects.attribute = attributeObject
-				createInstanceOfObject()
+				createStringObject()
 				
 			})
 			
 		}
+
+		function createStringObject(){
+			app.newObject(app.tempTable.string, function(stringObject){
+				stringObject.initPrimitive('string',null)
+				objects.string = stringObject
+				createInstanceOfObject()
+			})
+		}
+
 		function createInstanceOfObject(){
 			var attributeObject = objects.attribute
 			app.createInstance(objects.attribute, function(instanceOfObject){
@@ -87,8 +90,8 @@ window.app = {
 				})
 				
 			}
-			addName(objects.attribute)
-			addName(objects.file)
+			//addName(objects.attribute)
+			//addName(objects.file)
 			cb()
 		}
 		
@@ -166,6 +169,7 @@ window.app = {
 	
 	newObject: function(uuid, callback){
 		//creates new object
+		console.log('run',uuid)
 		$.ajax({
 				type: 'POST',
 				url: '/object/new',
@@ -194,7 +198,7 @@ window.app = {
 	
 	createInstance: function(parentObject,cb) {//should this just be parentObject instead of uuid?
 		
-		console.log('creating instance', parentObject.uuid)
+		console.log('creating instance----------------------', parentObject.uuid)
 		var app = this;
 		
 		var map = {}; //mapping between template and instance objects for terminating loops
@@ -217,7 +221,7 @@ window.app = {
 				if(templateObject.isAnAttribute()){
 					var attributeObject = app.createAttribute(templateObject,newObject)
 					if(cb===undefined){
-						return create(attributeObject)
+						return attributeObject
 					} else {
 						cb(attributeObject)
 					}
@@ -226,33 +230,30 @@ window.app = {
 			
 			//add visualization before attributes are initialized
 			newObject.addObjectToVisualization()//eventually replace
-			newObject.createObjectVisualization()
-			
-			//initialize attributes with special cases
-			
+			newObject.createObjectVisualization()	
 			
 			//initialize remaining attributes
 			templateObject.getAttrs().forEach(function(attrObj){
 				
-				var newAttrObj = app.createInstance(attrObj,function(){
-					newObject.addAttribute(attributeObject)
-				})
-				 //possible loop created here
-
-				templateObject.getAttrValues(templateAttributeObject).forEach(function(attributeValue,index){
-					var targetUUID = templateObject.attributes[attributeKey].values[index].uuid
-					if (map.hasOwnProperty(targetUUID)){//need to make work for multiple values
-						var newValue = map[targetUUID]
-					} else if (attributeKey === app.tempTable.instanceOf){
-						var newValue = templateObject
-						
+				var newAttrObj = app.createInstance(attrObj)
+				newObject.addAttribute(newAttrObj)
+				templateObject.getAttrValues(attrObj).forEach(function(attributeValue){
+					var targetUUID = attributeValue.uuid
+					if (map.hasOwnProperty(targetUUID)){
+						var newValue = map[targetUUID];
+					} else if (attributeValue === app.tempTable.instanceOf){//won't work yet
+						var newValue = templateObject;
 					} else {
-						var newValue = create(attributeValue.uuid)
-						map[targetUUID] = newValue
+						var newValue = create(attributeValue);
+						map[targetUUID] = newValue;
 						
 					}
-					newObject.extendAttribute(attributeKey,newValue)
+					newObject.extendAttribute(attributeValue,newValue)
 				})
+				
+				 //possible loop created here
+
+				
 			})
 			app.objectCache[newObject.uuid]=newObject
 
@@ -282,6 +283,7 @@ window.app = {
 				console.log(newObject)
 		return newObject
 	},
+
 	/**
 	 * Loads object with uuid from database, creates it and places it in the templateCache
 	 * @param {[[Type]]} uuid [[Description]]
@@ -292,6 +294,7 @@ window.app = {
 			if (app.jsonCache.hasOwnProperty(uuid)) {
 				cb(app.templateCache[uuid])
 			} else {
+
 				$.getJSON('/object/'+uuid, function(template) {
 					app.jsonCache[uuid] = template;
 
@@ -320,8 +323,8 @@ window.app = {
 					}
 				})
 				.fail(function(a, b, c) {
+					console.log('failed to load valid JSON ', uuid, a, b, c)
 					throw 'UUID "' +uuid+'" not found in database'
-					console.log('failed to load valid JSON file check that file is valid and there', uuid, a, b, c)
 				})
 			}
 		}
