@@ -50,7 +50,9 @@ window.app = {
 		function createStringObject(){
 			app.newObject(app.tempTable.string, function(stringObject){
 				stringObject.initPrimitive('string',null)
+				stringObject.setId(app.tempTable.string)
 				objects.string = stringObject
+
 				createInstanceOfObject()
 			})
 		}
@@ -70,12 +72,11 @@ window.app = {
 
 		function createnameEnObject(){
 			app.createInstance(objects.attribute, function(nameEnObject){
-					
 					nameEnObject.initPrimitive('attribute',null)
-						.addAttribute(objects.instanceOf)
-						.extendAttribute(objects.instanceOf,objects.attribute)
+						//.addAttribute(objects.instanceOf)
+						//.extendAttribute(objects.instanceOf,objects.attribute)
 						//.addAttribute(nameEnObject,)
-					nameEnObject.uuid = app.tempTable.nameEn
+					nameEnObject.setId(app.tempTable.nameEn)
 					objects.nameEn = nameEnObject
 				addNamesToObjects()
 			})
@@ -270,6 +271,8 @@ window.app = {
 	},
 	
 	createAttribute: function(templateObject, newObject){//move to within createInstance?
+		newObject.addObjectToVisualization()//eventually replace
+		newObject.createObjectVisualization()
 		Object.keys(templateObject.attributes).forEach(function(attributeName){
 			var attributeDescriptor = templateObject.attributes[attributeName]
 			if(attributeDescriptor.values.length > 1){
@@ -278,8 +281,7 @@ window.app = {
 				templateObject.addAttribute(templateObject)
 			}
 		})
-		newObject.addObjectToVisualization()//eventually replace
-		newObject.createObjectVisualization()
+		
 				console.log(newObject)
 		return newObject
 	},

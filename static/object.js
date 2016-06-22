@@ -115,6 +115,7 @@ window.app.objectProto = {//contains shared methods of all objects
 
 		if (this.attributes.hasOwnProperty(attributeUUID)){
 			console.log('already has attribute',this.attributes,attributeUUID)
+			throw 'already has attribute'
 		} else if (this.isAnAttribute()){
 			this.attributes[attributeUUID] = {attribute:attributeObject, values:[]};
 			this.addAttributeToObjectVisualization(attributeObject, [])
@@ -405,7 +406,7 @@ window.app.objectProto = {//contains shared methods of all objects
 		})
 		//}
 
-		console.log(attributeType)
+		console.log('--------------------',attributeObject)
 		attributeBlock.className = 'UUID'+attributeType;
 
 		values.forEach(function(value){
@@ -461,7 +462,7 @@ window.app.objectProto = {//contains shared methods of all objects
 		console.log(attributeType,value)
 		var obj = this;
 		console.log(this.accordianContainer, attributeType)
-		
+
 		var valueListDiv = this.accordianContainer.querySelector('.UUID' + attributeType)
 		var valueDiv = document.createElement('div')
 		var label = app.vis.getDisplayText(value)
