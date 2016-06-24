@@ -196,93 +196,45 @@ window.app = {
 	 * @returns {[[Type]]} [[Description]]
 	 */
 	
-	
-	createInstance: function(parentObject,cb) {//should this just be parentObject instead of uuid?
-		
-		console.log('creating instance----------------------', parentObject.uuid)
+	createObj:function(){
+		var newObject = Object.create(app.objectProto);
+		newObject.uuid = app.generateUUID()
+		//newObject.attributes = new Map()
+		//newObject.dependents = new Set()
+		newObject.attributes = {};
+		newObject.dependents = [];
+		newObject.attributePrimitiveBuffer = {};
+		return newObject
+	},
+
+	createInstance: function(parentObject,cb) {
 		var app = this;
-		
-		var map = {}; //mapping between template and instance objects for terminating loops
-		var create = function(){
-			
-			//initialize object
-			var newObject = Object.create(app.objectProto);
-			newObject.uuid = app.generateUUID()
-			newObject.attributes = {};
-			newObject.dependents = [];
-			newObject.attributePrimitiveBuffer = {};
-			map[parentObject.uuid] = newObject;
+		var newObject = app.createObj()
 			//retrieve template
-			var templateObject = parentObject//app.objectCache[parentObject.uuid]
-			
-			//initialize primitive if needed
-			if (templateObject.hasOwnProperty('primitive')){
-				var primitiveString = templateObject.primitive.save()
-				newObject.initPrimitive(primitiveString.name, primitiveString.value)
-				if(templateObject.isAnAttribute()){
-					var attributeObject = app.createAttribute(templateObject,newObject)
-					if(cb===undefined){
-						return attributeObject
-					} else {
-						cb(attributeObject)
-					}
-				}
-			}
-			
-			//add visualization before attributes are initialized
-			newObject.addObjectToVisualization()//eventually replace
-			newObject.createObjectVisualization()	
-			
-			//initialize remaining attributes
-			templateObject.getAttrs().forEach(function(attrObj){
-				
-				var newAttrObj = app.createInstance(attrObj)
-				newObject.addAttribute(newAttrObj)
-				templateObject.getAttrValues(attrObj).forEach(function(attributeValue){
-					var targetUUID = attributeValue.uuid
-					if (map.hasOwnProperty(targetUUID)){
-						var newValue = map[targetUUID];
-					} else if (attributeValue === app.tempTable.instanceOf){//won't work yet
-						var newValue = templateObject;
-					} else {
-						var newValue = create(attributeValue);
-						map[targetUUID] = newValue;
-						
-					}
-					newObject.extendAttribute(attributeValue,newValue)
-				})
-				
-				 //possible loop created here
-
-				
-			})
-			app.objectCache[newObject.uuid]=newObject
-
-			return newObject
-		};
-		//this is ugly but it makes it either a synchronous function or async
-		if(cb===undefined){
-			return create(parentObject)
-		} else {
-			cb(create(parentObject))
+		
+		//initialize primitive if needed
+		if (parentObject.hasOwnProperty('primitive')){
+			var primitiveDescriptor = parentObject.primitive.save()
+			newObject.initPrimitive(primitiveDescriptor.name, primitiveDescriptor.value)
 		}
 		
-
-	},
-	
-	createAttribute: function(templateObject, newObject){//move to within createInstance?
+		//add visualization before attributes are initialized
 		newObject.addObjectToVisualization()//eventually replace
-		newObject.createObjectVisualization()
-		Object.keys(templateObject.attributes).forEach(function(attributeName){
-			var attributeDescriptor = templateObject.attributes[attributeName]
-			if(attributeDescriptor.values.length > 1){
-				throw 'attribute of '+ templateObject.uuid + ' has a cardinality greater than one'
-			} else {
-				templateObject.addAttribute(templateObject)
-			}
-		})
+		newObject.createObjectVisualization()	
 		
-				console.log(newObject)
+		//initialize remaining attributes
+		parentObject.getAttrs().forEach(function(attrObj){
+			var newAttrObj = app.createInstance(attrObj)
+			newObject.addAttribute(newAttrObj)
+			parentObject.getAttrValues(attrObj).forEach(function(attributeValue){
+				//case for instanceOf
+				//case for loop
+				//if (attributeValue.dependents.has(parentObject)
+			})
+			
+		})
+		app.objectCache[newObject.uuid]=newObject
+
 		return newObject
 	},
 
@@ -291,7 +243,7 @@ window.app = {
 	 * @param {[[Type]]} uuid [[Description]]
 	 * @param {[[Type]]} cb   [[Description]]
 	 */
-	loadObject:function(uuid,cb){
+	loadObject:function(uuid,cb){//need to update all of the saving and loading functions to lazy evaluation
 		var loadJson = function(uuid,cb){	
 			if (app.jsonCache.hasOwnProperty(uuid)) {
 				cb(app.templateCache[uuid])
